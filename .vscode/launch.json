@@ -1,0 +1,519 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Script_Alter_09_remove_smallCCLac",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.E_Extract_areas_with_morpho_and_corresponding_annotations.Script_Alter_09_remove_smallCCLac",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_08",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.E_Extract_areas_with_morpho_and_corresponding_annotations.Script_Alter_08",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_04",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.E_Extract_areas_with_morpho_and_corresponding_annotations.Script_Alter_04",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_06",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.E_Extract_areas_with_morpho_and_corresponding_annotations.Script_Alter_06",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_produce_seg_and_raw_investigation",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.F_compute_traits_and_evaluate.Script_produce_seg_and_raw_investigation",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_panel2",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.F_compute_traits_and_evaluate.Script_panel2",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_panel",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.F_compute_traits_and_evaluate.Script_panel",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_assemble_seg_investigation",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.F_compute_traits_and_evaluate.Script_assemble_seg_investigation",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_07",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.E_Extract_areas_with_morpho_and_corresponding_annotations.Script_Alter_07",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_10_compute_traits_over_estimated",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.F_compute_traits_and_evaluate.Script_Alter_10_compute_traits_over_estimated",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_02ter_verif_all",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.A_labelling.Script_02ter_verif_all",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Matching_Labels",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Matching_Labels",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_02Bis_Verif_Labels",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_02Bis_Verif_Labels",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_Eval",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_Eval",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_10_compute_traits_over_estimated",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_10_compute_traits_over_estimated",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_Fin_stack",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_Fin_stack",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_09_remove_smallCCLac",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_09_remove_smallCCLac",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_09",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_09",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_08",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_08",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_07",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_07",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_06",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_06",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_05",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_05",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_04",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_04",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_03",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_03",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_02",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_02",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Alter_01",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Alter_01",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_annex_make_manual",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_annex_make_manual",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_09_Tiers_Train_All",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_09_Tiers_Train_All",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_09_Tiers_Stack_All",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_09_Tiers_Stack_All",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_08_TiersRetirer_Void_Examples",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_08_TiersRetirer_Void_Examples",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Tiers_Deux_Correction_Annotation_Lacuna",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Tiers_Deux_Correction_Annotation_Lacuna",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Tiers_Correction_Annotation_Gaine",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Tiers_Correction_Annotation_Gaine",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_Tiers_Correction_Annotations",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_Tiers_Correction_Annotations",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_13_IOU_Mono",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_13_IOU_Mono",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_12_Infer_All",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_12_Infer_All",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_11_Stack_Aug_Slices",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_11_Stack_Aug_Slices",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "AerenchymeUtils",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.AerenchymeUtils",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "CubeModelTrainer",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.CubeModelTrainer",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "ProcessImageAndLacuneFilesToMeasureAerenchymePhenes",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.ProcessImageAndLacuneFilesToMeasureAerenchymePhenes",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "RandomForestCellClassification",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.RandomForestCellClassification",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_01_Labels",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_01_Labels",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_02_Verif_Labels",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_02_Verif_Labels",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_03_Patches256_Extractor",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_03_Patches256_Extractor",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_04_Verif_Annot",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_04_Verif_Annot",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_05_Extract_Patches_128",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_05_Extract_Patches_128",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_06_Generate_Examples",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_06_Generate_Examples",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_07_Split_Dataset",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_07_Split_Dataset",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_08_Stack_Examples",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_08_Stack_Examples",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Script_09_Train_RF",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Script_09_Train_RF",
+            "projectName": "segmentation",
+            "vmArgs": "-Xmx28G"
+        },
+        {
+            "type": "java",
+            "name": "Test",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.Test",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "ProcessImages",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.cperinrootpheno.ProcessImages",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "ProcessTifAndRSML",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.cperinrootpheno.ProcessTifAndRSML",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "HungarianAlgorithm",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.mlutils.HungarianAlgorithm",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "SmallestEnclosingCircle",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.mlutils.SmallestEnclosingCircle",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "NDPI",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.ndpisafe.NDPI",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "NDPITest",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.ndpisafe.NDPITest",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "SimpleTest",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.ndpisafe.SimpleTest",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Matthieu_BatchProcessing",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.Matthieu_BatchProcessing",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Matthieu_Test",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.Matthieu_Test",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Misc",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.Misc",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "PaperValidation",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.PaperValidation",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "PluginBatchProcessNDPI",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.PluginBatchProcessNDPI",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "ScriptMathieu",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.ScriptMathieu",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "ScriptRomain",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.ScriptRomain",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "TestRomain",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.TestRomain",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "VesselSegmentation",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.sorghobff.VesselSegmentation",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "ExamplePlugin",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.ExamplePlugin",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Simple_Test",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.Simple_Test",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Syr",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.Syr",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Test2",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.Test2",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Test3",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.Test3",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Test4",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.Test4",
+            "projectName": "segmentation"
+        }
+    ]
+}

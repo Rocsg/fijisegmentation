@@ -78,11 +78,16 @@ public class Script_panel2 {
         }
         // lire liste de codes
         List<String> codes = new ArrayList<>();
+        List<Double> ratios = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(LIST_CSV))) {
+            System.out.println(LIST_CSV);
             String header = br.readLine();
             String line;
             while ((line=br.readLine())!=null) {
-                codes.add(line.trim());
+                System.out.println(line);
+                String[] p = line.split(",");
+                codes.add(p[0]);
+                ratios.add(Double.parseDouble(p[1]));
             }
         } catch (IOException e) {
             IJ.error("Erreur lecture liste codes: " + e.getMessage());
@@ -101,7 +106,9 @@ public class Script_panel2 {
             ImageStack stackSeg = null;
             int w=0, h=0;
             Opener opener = new Opener();
-            for (String codeRom : codes) {
+            for (int i=0;i<codes.size();i++) { 
+                String codeRom = codes.get(i);
+                double ratio   = ratios.get(i);
                 String codeHani = rom2hani.get(codeRom);
                 if (codeHani==null) codeHani = "";
                 // open raw
@@ -116,6 +123,8 @@ public class Script_panel2 {
                 ipRaw.drawString(codeRom.replace("Cube_", ""), 5, 15);
                 ipRaw.setColor(Color.yellow);
                 ipRaw.drawString(codeHani, 5, 30);
+                ipRaw.setFont(new Font("SansSerif", Font.BOLD, 11));
+                ipRaw.drawString(""+ratio, 80, 110);
                 ipRaw.setFont(new Font("SansSerif", Font.BOLD, 13));
                 if(isParent(Integer.parseInt(codeHani))){
                     ipRaw.setColor(Color.blue);
@@ -151,6 +160,10 @@ public class Script_panel2 {
                 ipSeg.drawString(codeRom.replace("Cube_", ""), 5, 15);
                 ipSeg.setColor(Color.yellow);
                 ipSeg.drawString(codeHani, 5, 30);
+                ipSeg.setFont(new Font("SansSerif", Font.BOLD, 11));
+                ipSeg.setColor(Color.pink);
+                ipSeg.drawString(""+ratio, 80, 120);
+                ipSeg.setColor(Color.yellow);
                 ipSeg.setFont(new Font("SansSerif", Font.BOLD, 23));
                 if(isParent(Integer.parseInt(codeHani))){
                     ipSeg.setColor(Color.blue);
@@ -165,7 +178,6 @@ public class Script_panel2 {
                 if(isTemoinMoins(Integer.parseInt(codeHani))){
                     ipSeg.setColor(Color.red);
                     ipSeg.drawString("AA-", 15, 120);
-    
                 }
                     if (stackSeg==null) {
                     // assume same dims

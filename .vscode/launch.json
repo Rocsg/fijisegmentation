@@ -6,6 +6,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "ReconstructionTimeseries",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.jeantrap.ReconstructionTimeseries",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Plugin_HTP_Measurements",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.fijiplugin_htp_cubes.Plugin_HTP_Measurements",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
             "name": "Script_Alter_09_remove_smallCCLac",
             "request": "launch",
             "mainClass": "io.github.rocsg.segmentation.aerenchyme.E_Extract_areas_with_morpho_and_corresponding_annotations.Script_Alter_09_remove_smallCCLac",

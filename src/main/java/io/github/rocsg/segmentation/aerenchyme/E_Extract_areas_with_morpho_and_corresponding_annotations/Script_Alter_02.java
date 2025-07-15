@@ -39,7 +39,7 @@ public class Script_Alter_02 {
                     if (segImp == null) {
                         IJ.error("Cannot open segmentation: " + segFile.getPath());
                         continue;
-                    }modelling
+                    }
                     // dilation then erosion
                     ImagePlus dilated = MorphoUtils.dilationCircle2D(segImp, RADIUS);
                     ImagePlus closed  = MorphoUtils.erosionCircle2D(dilated, RADIUS);

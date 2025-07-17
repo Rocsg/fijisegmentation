@@ -31,7 +31,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public class Plugin_HTP_Measurements extends ij.plugin.frame.PlugInFrame {
+public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
 
 
     public static void main(String[] args) {
@@ -41,8 +41,11 @@ public class Plugin_HTP_Measurements extends ij.plugin.frame.PlugInFrame {
     }
 
     public Plugin_HTP_Measurements(String s){
-        super(s);
     }
+
+    public Plugin_HTP_Measurements(){
+    }
+
 
     public void run(String mainDir) {
         if (mainDir == null || new File(mainDir).exists() == false || new File(mainDir).isDirectory() == false || new File(mainDir).list().length < 2) {

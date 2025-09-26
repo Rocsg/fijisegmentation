@@ -16,7 +16,6 @@ import ij.plugin.Duplicator;
 import ij.plugin.MontageMaker;
 import ij.gui.TextRoi;
 import java.awt.Font;
-import java.awt.Image;
 import java.awt.image.VolatileImage;
 import java.awt.Color;
 import ij.io.Opener;
@@ -32,30 +31,29 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
+public class FastProcessDirOfAerenchymeImages {
 
 
     public static void main(String[] args) {
         ImageJ ij=new ImageJ();
-        String mainDir="";///home/rfernandez/Bureau/A_Test/Aerenchyme/Test2";
-        new Plugin_HTP_Measurements("").run(mainDir);
+        String inputDir="/home/rfernandez/Bureau/A_Test/Aerenchyme/TestTemp/P02_organs";
+        String outputDir="/home/rfernandez/Bureau/A_Test/Aerenchyme/TestTemp/P02_organs_Results";
+        new FastProcessDirOfAerenchymeImages("").run(inputDir,outputDir);
     }
 
-    public Plugin_HTP_Measurements(String s){
+    public FastProcessDirOfAerenchymeImages(String s){
     }
 
-    public Plugin_HTP_Measurements(){
+    public FastProcessDirOfAerenchymeImages(){
     }
 
 
-    public void run(String mainDir) {
-        if (mainDir == null || new File(mainDir).exists() == false || new File(mainDir).isDirectory() == false || new File(mainDir).list().length < 2) {
-            System.out.println("No main directory specified");
-            mainDir=VitiDialogs.chooseDirectoryNiceUI("Give a main dir containing a Model dir and a Raw_patches dir", "");
-        }
+    public void run(String inputDir,String outputDir) {
+        String mainDir=outputDir;
+        new File(mainDir+"/").mkdirs();
         final String BASE_PATH     = mainDir;
-        final String INPUT_DIR     = BASE_PATH + "/Raw_patches_128x128xN";
-        final String MODEL_PATH    = BASE_PATH + "/Model/classifier_bare.model";
+        final String INPUT_DIR     = inputDir;
+        final String MODEL_PATH    = BASE_PATH + "/Model/classifier_bare2.model";
     
         // Intermediate output dirs
         final String DIR1 = BASE_PATH + "/1_segmentation_tissue";
@@ -85,8 +83,9 @@ public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
         // 1. Charger le modèle Weka une seule fois
         WekaSegmentation weka = new WekaSegmentation();
         weka.loadClassifier(MODEL_PATH);
-
+        System.out.println("Weka loaded");
         File input = new File(INPUT_DIR);
+        System.out.println("input loaded");
         File[] files = input.listFiles((dir, name) -> name.toLowerCase().endsWith(".tif"));
         if (files == null) {
             System.err.println("No input files found in " + INPUT_DIR);
@@ -94,9 +93,7 @@ public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
         }
 
         for (File file : files) {
-            String code = file.getName().replaceAll("\\.tif$", "");
-            String codeCube=code.split("__")[0];
-            String codeExpe=code.split("__")[1];
+            String code = file.getName().replaceAll("\\.tif", "");
             System.out.print("\nProcessing: " + code+" ... ");
 
             // --- 1. Segmentation tissue via Weka, seuil binaire
@@ -114,8 +111,9 @@ public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
 
             // --- 2. Fermeture morphologique (dilate puis erode, rayon=2)
             System.out.print("2 ");
+            ImagePlus imgClosed=maskCircular(imgMask,true);
             
-            ImagePlus imgClosed = opening(imgMask, 2);
+            //ImagePlus imgClosed = opening(imgMask, 5);
             new FileSaver(imgClosed).saveAsTiff(DIR2 + "/" + code + ".tif");
 
             // --- 3. Fill holes (invert, fill, invert)
@@ -168,7 +166,7 @@ public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
         }
         System.out.println();
         //Calcul des traits
-        computeAndSaveLeafStats(
+        /*computeAndSaveLeafStats(
             BASE_PATH,
             DIR6,    // gaine: dossier résultat après monoCC
             DIR8,    // lacuna: dossier lacunes nettoyées
@@ -186,8 +184,46 @@ public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
             BASE_PATH + "/panel_raw.tif",
             BASE_PATH + "/panel_seg.tif"
         );
+        */
         System.out.println("Pipeline terminé.");
     }
+
+    public static ImagePlus maskCircular(ImagePlus impIn, boolean value) {
+        ImagePlus imp = impIn.duplicate();
+        int w = imp.getWidth();
+        int h = imp.getHeight();
+        double cx = w / 2.0;
+        double cy = h / 2.0;
+        double r = Math.min(w, h) / 2.0;
+        double rCut = 0.97 * r;
+        double rCutStart = rCut * rCut;
+        double rCutEnd= rCutStart/2;
+        int nSlices = imp.getStackSize();
+        for (int z = 1; z <= nSlices; z++) {
+            ImageProcessor ip = imp.getStack().getProcessor(z);
+            if (!(ip instanceof ByteProcessor)) continue;
+            double factor=(z-1)*1.0/(nSlices-1);
+            double rCutInterp=rCutStart*(1-factor)+(rCutEnd)*(factor);
+            System.out.println("z="+z+" , rCutInterp="+rCutInterp);
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    double dx = x - cx;
+                    double dy = y - cy;
+
+                    //Interpoler rCut entre rCutStart et rCutEnd en fonction de z
+
+                    if (dx*dx + dy*dy > rCutInterp) {
+
+                        ip.set(x, y, value ? 255 : 0);
+                    }
+                }
+            }
+        }
+        imp.updateAndDraw();
+        return imp;
+    }
+
+
 
 
     private static ImagePlus closing(ImagePlus imp, int radius) {

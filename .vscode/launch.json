@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "FastProcessDirOfAerenchymeImages",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.fijiplugin_htp_cubes.FastProcessDirOfAerenchymeImages",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
             "name": "ReconstructionTimeseries",
             "request": "launch",
             "mainClass": "io.github.rocsg.segmentation.jeantrap.ReconstructionTimeseries",

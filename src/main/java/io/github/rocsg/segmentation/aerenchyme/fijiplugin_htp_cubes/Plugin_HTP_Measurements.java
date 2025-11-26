@@ -37,7 +37,7 @@ public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
 
     public static void main(String[] args) {
         ImageJ ij=new ImageJ();
-        String mainDir="";///home/rfernandez/Bureau/A_Test/Aerenchyme/Test2";
+        String mainDir="/home/rfernandez/Bureau/A_Test/Charlotte_truc";
         new Plugin_HTP_Measurements("").run(mainDir);
     }
 
@@ -121,7 +121,9 @@ public class Plugin_HTP_Measurements implements ij.plugin.PlugIn {
             // --- 3. Fill holes (invert, fill, invert)
             System.out.print("3 ");
             ImagePlus imgFill = imgClosed.duplicate();
+            IJ.run(imgFill, "Invert", "stack");
             IJ.run(imgFill, "Fill Holes", "stack");
+            IJ.run(imgFill, "Invert", "stack");
             new FileSaver(imgFill).saveAsTiff(DIR3 + "/" + code + ".tif");
 
             // --- 4. Central connected component

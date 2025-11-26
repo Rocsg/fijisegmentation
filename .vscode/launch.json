@@ -6,6 +6,48 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Gargee_is_the_greatest_figter_ever_while_still_in_training",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.Gargee_is_the_greatest_figter_ever_while_still_in_training",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "TransformClimateStripes",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.TransformClimateStripes",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "AxisAlignedEllipsoidFit",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.AxisAlignedEllipsoidFit",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Use3DEllipsoid",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.Use3DEllipsoid",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "EllipsoidFit3D",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.EllipsoidFit3D",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "GargeeEllipsoid",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.GargeeEllipsoid",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
             "name": "FastProcessDirOfAerenchymeImages",
             "request": "launch",
             "mainClass": "io.github.rocsg.segmentation.aerenchyme.fijiplugin_htp_cubes.FastProcessDirOfAerenchymeImages",

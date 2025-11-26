@@ -1,0 +1,156 @@
+/**
+ * Script_2_Extract_Patches.bsh
+ * 
+ * Extracts patches around coordinates from CSV files
+ * Input:  BASE_DIR/Processing/1_Patches_coordinates/*.csv
+ *         BASE_DIR/Processing/0_Grayscale/*.tif
+ * Output: BASE_DIR/Processing/2_Extracted_patches/*.tif
+ */
+
+import ij.*;
+import ij.io.*;
+import ij.process.*;
+import java.io.*;
+import java.util.*;
+
+// Patch size parameter
+int PATCH_SIZE = 378;
+int HALF = PATCH_SIZE / 2;
+
+// Ask user for main directory
+DirectoryChooser dc = new DirectoryChooser("Select main project directory");
+String BASE_DIR = dc.getDirectory();
+if (BASE_DIR == null) {
+    IJ.error("No directory selected");
+    return;
+}
+
+String COORD_DIR = BASE_DIR + "Processing" + File.separator + "1_Patches_coordinates" + File.separator;
+String IMAGE_DIR = BASE_DIR + "Processing" + File.separator + "0_Grayscale" + File.separator;
+String OUT_DIR = BASE_DIR + "Processing" + File.separator + "2_Extracted_patches" + File.separator;
+
+// Check directories
+File coordFolder = new File(COORD_DIR);
+if (!coordFolder.exists()) {
+    IJ.error("Coordinates directory not found: " + COORD_DIR);
+    return;
+}
+
+File imageFolder = new File(IMAGE_DIR);
+if (!imageFolder.exists()) {
+    IJ.error("Images directory not found: " + IMAGE_DIR);
+    return;
+}
+
+// Create output directory
+File outFolder = new File(OUT_DIR);
+if (!outFolder.exists()) {
+    outFolder.mkdirs();
+}
+
+IJ.log("\\Clear");
+IJ.log("=== Script 2: Extract Patches ===");
+IJ.log("Coordinates: " + COORD_DIR);
+IJ.log("Images:      " + IMAGE_DIR);
+IJ.log("Output:      " + OUT_DIR);
+IJ.log("Patch size:  " + PATCH_SIZE + "x" + PATCH_SIZE);
+
+// Get all CSV files
+File[] csvFiles = coordFolder.listFiles(new FilenameFilter() {
+    public boolean accept(File dir, String name) {
+        return name.toLowerCase().endsWith(".csv");
+    }
+});
+
+if (csvFiles == null || csvFiles.length == 0) {
+    IJ.error("No CSV files found");
+    return;
+}
+
+int count = 0;
+Map imageCache = new HashMap();
+
+for (File csvFile : csvFiles) {
+    String csvName = csvFile.getName();
+    // Extract image name and patch number from filename (e.g., "image_1.csv")
+    String baseName = csvName.substring(0, csvName.lastIndexOf('.'));
+    int lastUnderscore = baseName.lastIndexOf('_');
+    String imageName = baseName.substring(0, lastUnderscore);
+    String patchNum = baseName.substring(lastUnderscore + 1);
+    
+    IJ.log("\nProcessing: " + csvName);
+    
+    // Read coordinates from CSV
+    int x = -1, y = -1;
+    try {
+        BufferedReader br = new BufferedReader(new FileReader(csvFile));
+        br.readLine(); // Skip header
+        String line = br.readLine();
+        if (line != null) {
+            String[] parts = line.split(",");
+            x = Integer.parseInt(parts[0].trim());
+            y = Integer.parseInt(parts[1].trim());
+        }
+        br.close();
+    } catch (Exception e) {
+        IJ.log("  ERROR reading CSV: " + e.getMessage());
+        continue;
+    }
+    
+    if (x < 0 || y < 0) {
+        IJ.log("  ERROR: Invalid coordinates in " + csvName);
+        continue;
+    }
+    
+    IJ.log("  Coordinates: x=" + x + ", y=" + y);
+    
+    // Load image (cache to avoid reloading)
+    ImagePlus imp = (ImagePlus) imageCache.get(imageName);
+    if (imp == null) {
+        String imagePath = IMAGE_DIR + imageName + ".tif";
+        imp = IJ.openImage(imagePath);
+        if (imp == null) {
+            IJ.log("  ERROR: Could not open image " + imagePath);
+            continue;
+        }
+        imageCache.put(imageName, imp);
+    }
+    
+    // Extract patch
+    ImageProcessor ip = imp.getProcessor();
+    int w = ip.getWidth();
+    int h = ip.getHeight();
+    
+    // Calculate ROI bounds (ensuring we stay within image)
+    int x0 = Math.max(0, x - HALF);
+    int y0 = Math.max(0, y - HALF);
+    x0 = Math.min(x0, w - PATCH_SIZE);
+    y0 = Math.min(y0, h - PATCH_SIZE);
+    
+    // Handle edge cases where image is smaller than patch
+    if (x0 < 0 || y0 < 0 || x0 + PATCH_SIZE > w || y0 + PATCH_SIZE > h) {
+        IJ.log("  WARNING: Patch extends beyond image boundaries, adjusting...");
+        x0 = Math.max(0, Math.min(x0, w - PATCH_SIZE));
+        y0 = Math.max(0, Math.min(y0, h - PATCH_SIZE));
+    }
+    
+    ip.setRoi(x0, y0, PATCH_SIZE, PATCH_SIZE);
+    ImageProcessor patch = ip.crop();
+    
+    // Save patch
+    ImagePlus patchImp = new ImagePlus(baseName, patch);
+    String outPath = OUT_DIR + baseName + ".tif";
+    FileSaver fs = new FileSaver(patchImp);
+    fs.saveAsTiff(outPath);
+    
+    IJ.log("  Saved: " + baseName + ".tif");
+    count++;
+}
+
+// Close cached images
+for (Object imp : imageCache.values()) {
+    ((ImagePlus)imp).close();
+}
+
+IJ.log("\n=== Completed: " + count + " patches extracted ===");
+IJ.showMessage("Script 2 Complete", count + " patches extracted");

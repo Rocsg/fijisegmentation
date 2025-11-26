@@ -1,0 +1,209 @@
+/**
+ * Script_4_Extract_Vein_And_Aerenchyma.bsh
+ * 
+ * Applies morphological operations to extract vein and aerenchyma
+ * Similar to E_Extract_areas operations
+ * Input:  BASE_DIR/Processing/3_Predicted_segmentation/*.tif
+ * Output: BASE_DIR/Processing/4_Segmentation/*_vein.tif, *_aerenchyma.tif
+ */
+
+import ij.*;
+import ij.io.*;
+import ij.process.*;
+import ij.plugin.*;
+import ij.plugin.filter.*;
+import java.io.*;
+import java.util.*;
+
+// Morphological parameters
+int FILL_RADIUS = 3;
+int OPENING_RADIUS = 8;
+
+// Ask user for main directory
+DirectoryChooser dc = new DirectoryChooser("Select main project directory");
+String BASE_DIR = dc.getDirectory();
+if (BASE_DIR == null) {
+    IJ.error("No directory selected");
+    return;
+}
+
+String IN_DIR = BASE_DIR + "Processing" + File.separator + "3_Predicted_segmentation" + File.separator;
+String OUT_DIR = BASE_DIR + "Processing" + File.separator + "4_Segmentation" + File.separator;
+
+// Check directory
+File inFolder = new File(IN_DIR);
+if (!inFolder.exists()) {
+    IJ.error("Input directory not found: " + IN_DIR);
+    return;
+}
+
+// Create output directory
+File outFolder = new File(OUT_DIR);
+if (!outFolder.exists()) {
+    outFolder.mkdirs();
+}
+
+IJ.log("\\Clear");
+IJ.log("=== Script 4: Extract Vein and Aerenchyma ===");
+IJ.log("Input:  " + IN_DIR);
+IJ.log("Output: " + OUT_DIR);
+
+// Get all tif files
+File[] files = inFolder.listFiles(new FilenameFilter() {
+    public boolean accept(File dir, String name) {
+        return name.toLowerCase().endsWith(".tif") || name.toLowerCase().endsWith(".tiff");
+    }
+});
+
+if (files == null || files.length == 0) {
+    IJ.error("No segmentation files found");
+    return;
+}
+
+int count = 0;
+for (File file : files) {
+    String filename = file.getName();
+    String baseName = filename.substring(0, filename.lastIndexOf('.'));
+    
+    IJ.log("\nProcessing: " + filename);
+    
+    // Open segmentation
+    ImagePlus imp = IJ.openImage(file.getAbsolutePath());
+    if (imp == null) {
+        IJ.log("  ERROR: Could not open " + filename);
+        continue;
+    }
+    
+    // Step 1: Fill holes
+    IJ.log("  Step 1: Filling holes...");
+    ImagePlus filled = imp.duplicate();
+    IJ.run(filled, "Fill Holes", "");
+    
+    // Step 2: Keep largest connected component (central CC)
+    IJ.log("  Step 2: Extracting largest component...");
+    ByteProcessor bp = (ByteProcessor) filled.getProcessor();
+    int w = bp.getWidth(), h = bp.getHeight();
+    
+    // Label connected components
+    int[][] labels = new int[h][w];
+    List counts = new ArrayList();
+    counts.add(0);
+    List sumX = new ArrayList();
+    sumX.add(0.0);
+    List sumY = new ArrayList();
+    sumY.add(0.0);
+    
+    int lbl = 0;
+    Stack stack = new Stack();
+    
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            if (bp.get(x, y) == 255 && labels[y][x] == 0) {
+                lbl++;
+                counts.add(0);
+                sumX.add(0.0);
+                sumY.add(0.0);
+                stack.clear();
+                stack.push(new int[]{x, y});
+                labels[y][x] = lbl;
+                
+                while (!stack.isEmpty()) {
+                    int[] p = (int[]) stack.pop();
+                    int px = p[0], py = p[1];
+                    sumX.set(lbl, (Double)sumX.get(lbl) + px);
+                    sumY.set(lbl, (Double)sumY.get(lbl) + py);
+                    counts.set(lbl, (Integer)counts.get(lbl) + 1);
+                    
+                    int[][] dirs = {{1,0}, {-1,0}, {0,1}, {0,-1}};
+                    for (int d = 0; d < dirs.length; d++) {
+                        int nx = px + dirs[d][0];
+                        int ny = py + dirs[d][1];
+                        if (nx >= 0 && nx < w && ny >= 0 && ny < h &&
+                            bp.get(nx, ny) == 255 && labels[ny][nx] == 0) {
+                            labels[ny][nx] = lbl;
+                            stack.push(new int[]{nx, ny});
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Find component closest to center
+    double cx0 = w / 2.0, cy0 = h / 2.0;
+    double bestDist = Double.MAX_VALUE;
+    int bestLabel = 0;
+    
+    for (int L = 1; L <= lbl; L++) {
+        int cnt = (Integer) counts.get(L);
+        if (cnt == 0) continue;
+        double cx = (Double)sumX.get(L) / cnt;
+        double cy = (Double)sumY.get(L) / cnt;
+        double d2 = (cx - cx0) * (cx - cx0) + (cy - cy0) * (cy - cy0);
+        if (d2 < bestDist) {
+            bestDist = d2;
+            bestLabel = L;
+        }
+    }
+    
+    // Create mask with only central component
+    ByteProcessor centralBp = new ByteProcessor(w, h);
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            if (labels[y][x] == bestLabel) {
+                centralBp.set(x, y, 255);
+            }
+        }
+    }
+    ImagePlus central = new ImagePlus("central", centralBp);
+    
+    // Step 3: Morphological opening (erosion then dilation)
+    IJ.log("  Step 3: Applying morphological opening...");
+    ImagePlus eroded = central.duplicate();
+    for (int i = 0; i < OPENING_RADIUS; i++) {
+        IJ.run(eroded, "Erode", "");
+    }
+    ImagePlus opened = eroded.duplicate();
+    for (int i = 0; i < OPENING_RADIUS; i++) {
+        IJ.run(opened, "Dilate", "");
+    }
+    
+    // Step 4: Extract vein (original - opened)
+    IJ.log("  Step 4: Extracting vein and aerenchyma...");
+    ByteProcessor openedBp = (ByteProcessor) opened.getProcessor();
+    ByteProcessor veinBp = new ByteProcessor(w, h);
+    
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            if (centralBp.get(x, y) == 255 && openedBp.get(x, y) == 0) {
+                veinBp.set(x, y, 255);
+            }
+        }
+    }
+    
+    // Save vein
+    ImagePlus vein = new ImagePlus(baseName + "_vein", veinBp);
+    String veinPath = OUT_DIR + baseName + "_vein.tif";
+    FileSaver fsVein = new FileSaver(vein);
+    fsVein.saveAsTiff(veinPath);
+    IJ.log("  Saved: " + baseName + "_vein.tif");
+    
+    // Save aerenchyma (opened result)
+    String aerenchymaPath = OUT_DIR + baseName + "_aerenchyma.tif";
+    FileSaver fsAer = new FileSaver(opened);
+    fsAer.saveAsTiff(aerenchymaPath);
+    IJ.log("  Saved: " + baseName + "_aerenchyma.tif");
+    
+    // Cleanup
+    imp.close();
+    filled.close();
+    central.close();
+    eroded.close();
+    opened.close();
+    vein.close();
+    
+    count++;
+}
+
+IJ.log("\n=== Completed: " + count + " patches processed ===");
+IJ.showMessage("Script 4 Complete", count + " patches processed");

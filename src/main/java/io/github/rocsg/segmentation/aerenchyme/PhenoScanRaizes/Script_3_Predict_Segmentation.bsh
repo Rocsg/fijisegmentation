@@ -50,14 +50,7 @@ IJ.log("Input:  " + IN_DIR);
 IJ.log("Model:  " + MODEL_PATH);
 IJ.log("Output: " + OUT_DIR);
 
-// Get class index from user
-GenericDialog gd = new GenericDialog("Select Class");
-gd.addNumericField("Class index to extract (0, 1, 2...):", 1, 0);
-gd.showDialog();
-if (gd.wasCanceled()) {
-    return;
-}
-int classIndex = (int) gd.getNextNumber();
+int classIndex = 0;
 
 IJ.log("Extracting class index: " + classIndex);
 
@@ -107,7 +100,7 @@ for (File file : files) {
         ImageProcessor ip = result.getChannelProcessor();
         
         // Convert to binary (threshold at 128)
-        ip.setThreshold(128, 255, ImageProcessor.NO_LUT_UPDATE);
+        ip.setThreshold(0.5, 255, ImageProcessor.NO_LUT_UPDATE);
         ip = ip.createMask();
         
         // Save binary mask

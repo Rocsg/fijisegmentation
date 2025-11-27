@@ -14,21 +14,43 @@ import ij.plugin.*;
 import ij.plugin.filter.*;
 import java.io.*;
 import java.util.*;
+import inra.ijpb.binary.geodesic.GeodesicDistanceTransformFloat;
+import inra.ijpb.morphology.Morphology;
+import inra.ijpb.morphology.Strel3D;
+
+
+   
+
+
 
 // Morphological parameters
 int FILL_RADIUS = 3;
-int OPENING_RADIUS = 8;
-
+int OPENING_RADIUS = 16;
+String BASE_DIR="";
 // Ask user for main directory
-DirectoryChooser dc = new DirectoryChooser("Select main project directory");
-String BASE_DIR = dc.getDirectory();
+
+boolean test=false;
+if(!test){
+	DirectoryChooser dc = new DirectoryChooser("Select main project directory");
+	BASE_DIR = dc.getDirectory();
+}
+else{
+	BASE_DIR="/home/rfernandez/Bureau/A_Test/Aerenchyme/Test_CIAT/";
+}
 if (BASE_DIR == null) {
     IJ.error("No directory selected");
     return;
 }
 
 String IN_DIR = BASE_DIR + "Processing" + File.separator + "3_Predicted_segmentation" + File.separator;
-String OUT_DIR = BASE_DIR + "Processing" + File.separator + "4_Segmentation" + File.separator;
+String OUT_VEIN_DIR = BASE_DIR + "Processing" + File.separator + "4_Segmentation_Vein" + File.separator;
+String OUT_AERENCHYMA_DIR = BASE_DIR + "Processing" + File.separator + "4_Segmentation_Aerenchyma" + File.separator;
+
+// Debug output directories
+String DEBUG_FILLED_DIR = BASE_DIR + "Processing" + File.separator + "4_Debug_1_Holes_Filled" + File.separator;
+String DEBUG_CENTRAL_DIR = BASE_DIR + "Processing" + File.separator + "4_Debug_2_Central_Component" + File.separator;
+String DEBUG_ERODED_DIR = BASE_DIR + "Processing" + File.separator + "4_Debug_3_Eroded" + File.separator;
+String DEBUG_OPENED_DIR = BASE_DIR + "Processing" + File.separator + "4_Debug_4_Opened" + File.separator;
 
 // Check directory
 File inFolder = new File(IN_DIR);
@@ -37,16 +59,19 @@ if (!inFolder.exists()) {
     return;
 }
 
-// Create output directory
-File outFolder = new File(OUT_DIR);
-if (!outFolder.exists()) {
-    outFolder.mkdirs();
-}
+// Create output directories
+new File(OUT_VEIN_DIR).mkdirs();
+new File(OUT_AERENCHYMA_DIR).mkdirs();
+new File(DEBUG_FILLED_DIR).mkdirs();
+new File(DEBUG_CENTRAL_DIR).mkdirs();
+new File(DEBUG_ERODED_DIR).mkdirs();
+new File(DEBUG_OPENED_DIR).mkdirs();
 
 IJ.log("\\Clear");
 IJ.log("=== Script 4: Extract Vein and Aerenchyma ===");
 IJ.log("Input:  " + IN_DIR);
-IJ.log("Output: " + OUT_DIR);
+IJ.log("Output Vein: " + OUT_VEIN_DIR);
+IJ.log("Output Aerenchyma: " + OUT_AERENCHYMA_DIR);
 
 // Get all tif files
 File[] files = inFolder.listFiles(new FilenameFilter() {
@@ -61,6 +86,7 @@ if (files == null || files.length == 0) {
 }
 
 int count = 0;
+boolean test=false;
 for (File file : files) {
     String filename = file.getName();
     String baseName = filename.substring(0, filename.lastIndexOf('.'));
@@ -73,11 +99,20 @@ for (File file : files) {
         IJ.log("  ERROR: Could not open " + filename);
         continue;
     }
+	double pixSizeX=imp.getCalibration().pixelWidth;
+	
+	Strel3D str2 = inra.ijpb.morphology.strel.DiskStrel.fromRadius(OPENING_RADIUS);
     
     // Step 1: Fill holes
     IJ.log("  Step 1: Filling holes...");
     ImagePlus filled = imp.duplicate();
+    IJ.run(filled, "Invert", "");
     IJ.run(filled, "Fill Holes", "");
+    IJ.run(filled, "Invert", "");
+    
+    // Save debug: filled
+    String debugFilledPath = DEBUG_FILLED_DIR + baseName + "_filled.tif";
+    new FileSaver(filled).saveAsTiff(debugFilledPath);
     
     // Step 2: Keep largest connected component (central CC)
     IJ.log("  Step 2: Extracting largest component...");
@@ -157,40 +192,115 @@ for (File file : files) {
     }
     ImagePlus central = new ImagePlus("central", centralBp);
     
+    // Save debug: central component
+    String debugCentralPath = DEBUG_CENTRAL_DIR + baseName + "_central.tif";
+    new FileSaver(central).saveAsTiff(debugCentralPath);
+    
+    
     // Step 3: Morphological opening (erosion then dilation)
     IJ.log("  Step 3: Applying morphological opening...");
     ImagePlus eroded = central.duplicate();
-    for (int i = 0; i < OPENING_RADIUS; i++) {
-        IJ.run(eroded, "Erode", "");
-    }
-    ImagePlus opened = eroded.duplicate();
-    for (int i = 0; i < OPENING_RADIUS; i++) {
-        IJ.run(opened, "Dilate", "");
-    }
+    eroded= new ImagePlus("", Morphology.erosion(eroded.getImageStack(), str2));
     
-    // Step 4: Extract vein (original - opened)
-    IJ.log("  Step 4: Extracting vein and aerenchyma...");
+    
+    // Save debug: eroded
+    String debugErodedPath = DEBUG_ERODED_DIR + baseName + "_eroded.tif";
+    new FileSaver(eroded).saveAsTiff(debugErodedPath);
+    
+    ImagePlus opened = eroded.duplicate();
+ 	opened= new ImagePlus("", Morphology.dilation(opened.getImageStack(), str2));
+   
+    
+    // Save debug: opened
+    String debugOpenedPath = DEBUG_OPENED_DIR + baseName + "_opened.tif";
+    new FileSaver(opened).saveAsTiff(debugOpenedPath);
+    
+    // Keep only largest connected component after opening
+    IJ.log("  Step 3b: Extracting largest component from opened result...");
     ByteProcessor openedBp = (ByteProcessor) opened.getProcessor();
-    ByteProcessor veinBp = new ByteProcessor(w, h);
+    int[][] labelsOpened = new int[h][w];
+    List countsOpened = new ArrayList();
+    countsOpened.add(0);
+    
+    int lblOpened = 0;
+    Stack stackOpened = new Stack();
     
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
-            if (centralBp.get(x, y) == 255 && openedBp.get(x, y) == 0) {
-                veinBp.set(x, y, 255);
+            if (openedBp.get(x, y) == 255 && labelsOpened[y][x] == 0) {
+                lblOpened++;
+                countsOpened.add(0);
+                stackOpened.clear();
+                stackOpened.push(new int[]{x, y});
+                labelsOpened[y][x] = lblOpened;
+                
+                while (!stackOpened.isEmpty()) {
+                    int[] p = (int[]) stackOpened.pop();
+                    int px = p[0], py = p[1];
+                    countsOpened.set(lblOpened, (Integer)countsOpened.get(lblOpened) + 1);
+                    
+                    int[][] dirs = {{1,0}, {-1,0}, {0,1}, {0,-1}};
+                    for (int d = 0; d < dirs.length; d++) {
+                        int nx = px + dirs[d][0];
+                        int ny = py + dirs[d][1];
+                        if (nx >= 0 && nx < w && ny >= 0 && ny < h &&
+                            openedBp.get(nx, ny) == 255 && labelsOpened[ny][nx] == 0) {
+                            labelsOpened[ny][nx] = lblOpened;
+                            stackOpened.push(new int[]{nx, ny});
+                        }
+                    }
+                }
             }
         }
     }
     
-    // Save vein
-    ImagePlus vein = new ImagePlus(baseName + "_vein", veinBp);
-    String veinPath = OUT_DIR + baseName + "_vein.tif";
-    FileSaver fsVein = new FileSaver(vein);
+    // Find largest component
+    int maxCount = 0;
+    int largestLabel = 0;
+    for (int L = 1; L <= lblOpened; L++) {
+        int cnt = (Integer) countsOpened.get(L);
+        if (cnt > maxCount) {
+            maxCount = cnt;
+            largestLabel = L;
+        }
+    }
+    
+    // Keep only largest component
+    ByteProcessor largestBp = new ByteProcessor(w, h);
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            if (labelsOpened[y][x] == largestLabel) {
+                largestBp.set(x, y, 255);
+            }
+        }
+    }
+    opened = new ImagePlus("opened_largest", largestBp);
+    
+    // Step 4: Extract vein and aerenchyma
+    IJ.log("  Step 4: Extracting vein and aerenchyma...");
+    
+    // Vein = the opened result (what was previously called "aerenchyma")
+    String veinPath = OUT_VEIN_DIR + baseName + "_vein.tif";
+    FileSaver fsVein = new FileSaver(opened);
     fsVein.saveAsTiff(veinPath);
     IJ.log("  Saved: " + baseName + "_vein.tif");
     
-    // Save aerenchyma (opened result)
-    String aerenchymaPath = OUT_DIR + baseName + "_aerenchyma.tif";
-    FileSaver fsAer = new FileSaver(opened);
+    // Aerenchyma = pixels that are 255 in vein AND 0 in original predicted segmentation
+    openedBp = (ByteProcessor) opened.getProcessor();
+    ByteProcessor originalBp = (ByteProcessor) imp.getProcessor();
+    ByteProcessor aerenchymaBp = new ByteProcessor(w, h);
+    
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            if (openedBp.get(x, y) == 255 && originalBp.get(x, y) == 0) {
+                aerenchymaBp.set(x, y, 255);
+            }
+        }
+    }
+    
+    ImagePlus aerenchyma = new ImagePlus(baseName + "_aerenchyma", aerenchymaBp);
+    String aerenchymaPath = OUT_AERENCHYMA_DIR + baseName + "_aerenchyma.tif";
+    FileSaver fsAer = new FileSaver(aerenchyma);
     fsAer.saveAsTiff(aerenchymaPath);
     IJ.log("  Saved: " + baseName + "_aerenchyma.tif");
     
@@ -200,9 +310,10 @@ for (File file : files) {
     central.close();
     eroded.close();
     opened.close();
-    vein.close();
+    aerenchyma.close();
     
     count++;
+	if(test)break;
 }
 
 IJ.log("\n=== Completed: " + count + " patches processed ===");

@@ -69,7 +69,6 @@ Thumbs.db
 ##############################
 ## ImageJ/Fiji
 ##############################
-*.model
 *.arff
 plugins.config.bak
 

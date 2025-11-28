@@ -57,9 +57,25 @@ if (files == null || files.length == 0) {
 
 IJ.setTool("multipoint");
 
+// Get or create ROI Manager
+RoiManager rm = RoiManager.getInstance();
+if (rm == null) {
+    rm = new RoiManager();
+}
+
 for (File file : files) {
     String filename = file.getName();
     String baseName = filename.substring(0, filename.lastIndexOf('.'));
+    
+    // Check if output files already exist
+    File csv1 = new File(OUT_DIR + baseName + "_1.csv");
+    File csv2 = new File(OUT_DIR + baseName + "_2.csv");
+    File csv3 = new File(OUT_DIR + baseName + "_3.csv");
+    
+    if (csv1.exists() && csv2.exists() && csv3.exists()) {
+        IJ.log("Skipping " + filename + " (output files already exist)");
+        continue;
+    }
     
     IJ.log("\nProcessing: " + filename);
     
@@ -73,14 +89,25 @@ for (File file : files) {
     imp.show();
     IJ.setTool("multipoint");
     
-    // Wait for user to select 3 points
-    new WaitForUserDialog("Select Points", 
-        "Click 3 points on the image, then click OK.\n" +
-        "Use Multi-point tool (should be selected automatically)").show();
+    // Clear ROI Manager for this image
+    rm.reset();
     
-    Roi roi = imp.getRoi();
+    IJ.log("  Waiting for ROI to be added to ROI Manager (press 't' to add points)...");
+    
+    // Wait until a ROI appears in the ROI Manager
+    while (rm.getCount() == 0) {
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            // Continue waiting
+        }
+    }
+    
+    // Get the ROI from the manager
+    Roi roi = rm.getRoi(0);
+    
     if (roi == null || !(roi instanceof PointRoi)) {
-        IJ.log("  WARNING: No points selected for " + filename);
+        IJ.log("  WARNING: No valid point ROI for " + filename);
         imp.close();
         continue;
     }

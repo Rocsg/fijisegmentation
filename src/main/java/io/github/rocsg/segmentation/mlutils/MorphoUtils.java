@@ -14,6 +14,7 @@ public class MorphoUtils {
     /// Various helpers for image manipulation //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public static ImagePlus erosionLine2D(ImagePlus img, int radius, boolean horizontal) {
         Strel3D str2 = null;
+        VitimageUtils.getVoxelSizes(img);
         if (horizontal) str2 = inra.ijpb.morphology.strel.LinearHorizontalStrel.fromRadius(radius);
         else str2 = inra.ijpb.morphology.strel.LinearVerticalStrel.fromRadius(radius);
         return new ImagePlus("", Morphology.erosion(img.getImageStack(), str2));

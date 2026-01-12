@@ -29,7 +29,7 @@ int OPENING_RADIUS = 25;
 String BASE_DIR="";
 // Ask user for main directory
 
-boolean test=true;
+boolean test=false;
 if(!test){
 	DirectoryChooser dc = new DirectoryChooser("Select main project directory");
 	BASE_DIR = dc.getDirectory();

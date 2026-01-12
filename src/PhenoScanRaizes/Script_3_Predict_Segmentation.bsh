@@ -14,7 +14,7 @@ import trainableSegmentation.WekaSegmentation;
 import java.io.*;
 
 // Ask user for main directory
-boolean test=true;
+boolean test=false;
 String BASE_DIR = "";
 if(test){
     BASE_DIR="/Donnees/DD_CIRS626_DATA/Aerenchymes/Bug_and_tests/Paula_bug_2/Test_jan_2026/";

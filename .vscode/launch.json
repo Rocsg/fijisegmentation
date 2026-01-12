@@ -6,6 +6,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "SplitRoiPoints",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.drone.SplitRoiPoints",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Test_Hausdorff_Distance",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.test.Test_Hausdorff_Distance",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
             "name": "Gargee_is_the_greatest_figter_ever_while_still_in_training",
             "request": "launch",
             "mainClass": "io.github.rocsg.segmentation.test.Gargee_is_the_greatest_figter_ever_while_still_in_training",

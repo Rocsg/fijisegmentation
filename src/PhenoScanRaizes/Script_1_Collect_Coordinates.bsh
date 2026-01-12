@@ -1,10 +1,10 @@
 /**
  * Script_1_Collect_Coordinates.bsh
  * 
- * Opens each grayscale image and asks user to click 3 points
+ * Opens each grayscale image and asks user to click 9 points (3 plants × 3 patches each)
  * Saves coordinates as CSV files
  * Input:  BASE_DIR/Processing/0_Grayscale/*.tif
- * Output: BASE_DIR/Processing/1_Patches_coordinates/*_1.csv, *_2.csv, *_3.csv
+ * Output: BASE_DIR/Processing/1_Patches_coordinates/*_plant1_patch1.csv ... *_plant3_patch3.csv
  */
 
 import ij.*;
@@ -67,13 +67,21 @@ for (File file : files) {
     String filename = file.getName();
     String baseName = filename.substring(0, filename.lastIndexOf('.'));
     
-    // Check if output files already exist
-    File csv1 = new File(OUT_DIR + baseName + "_1.csv");
-    File csv2 = new File(OUT_DIR + baseName + "_2.csv");
-    File csv3 = new File(OUT_DIR + baseName + "_3.csv");
+    // Check if all 9 output files already exist (3 plants × 3 patches)
+    boolean allExist = true;
+    for (int plant = 1; plant <= 3; plant++) {
+        for (int patch = 1; patch <= 3; patch++) {
+            File csv = new File(OUT_DIR + baseName + "_plant" + plant + "_patch" + patch + ".csv");
+            if (!csv.exists()) {
+                allExist = false;
+                break;
+            }
+        }
+        if (!allExist) break;
+    }
     
-    if (csv1.exists() && csv2.exists() && csv3.exists()) {
-        IJ.log("Skipping " + filename + " (output files already exist)");
+    if (allExist) {
+        IJ.log("Skipping " + filename + " (all output files already exist)");
         continue;
     }
     
@@ -89,54 +97,65 @@ for (File file : files) {
     imp.show();
     IJ.setTool("multipoint");
     
-    // Clear ROI Manager for this image
-    rm.reset();
-    
-    IJ.log("  Waiting for ROI to be added to ROI Manager (press 't' to add points)...");
-    
-    // Wait until a ROI appears in the ROI Manager
-    while (rm.getCount() == 0) {
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            // Continue waiting
-        }
-    }
-    
-    // Get the ROI from the manager
-    Roi roi = rm.getRoi(0);
-    
-    if (roi == null || !(roi instanceof PointRoi)) {
-        IJ.log("  WARNING: No valid point ROI for " + filename);
-        imp.close();
-        continue;
-    }
-    
-    PointRoi pointRoi = (PointRoi) roi;
-    int nPoints = pointRoi.getNCoordinates();
-    
-    if (nPoints != 3) {
-        IJ.log("  WARNING: Expected 3 points but got " + nPoints + " for " + filename);
-        // Continue anyway, save what we have
-    }
-    
-    // Get coordinates
-    int[] xCoords = pointRoi.getXCoordinates();
-    int[] yCoords = pointRoi.getYCoordinates();
-    Rectangle bounds = pointRoi.getBounds();
-    
-    // Save each point as separate CSV
-    for (int i = 0; i < Math.min(nPoints, 3); i++) {
-        String csvPath = OUT_DIR + baseName + "_" + (i+1) + ".csv";
-        try {
-            PrintWriter pw = new PrintWriter(new FileWriter(csvPath));
-            pw.println("x,y");
-            pw.println((bounds.x + xCoords[i]) + "," + (bounds.y + yCoords[i]));
-            pw.close();
-            IJ.log("  Saved: " + baseName + "_" + (i+1) + ".csv (x=" + 
-                   (bounds.x + xCoords[i]) + ", y=" + (bounds.y + yCoords[i]) + ")");
-        } catch (IOException e) {
-            IJ.log("  ERROR saving CSV: " + e.getMessage());
+    // Collect points for 3 plants, 3 patches each
+    for (int plant = 1; plant <= 3; plant++) {
+        IJ.log("\n  === PLANT " + plant + " ===");
+        
+        for (int patch = 1; patch <= 3; patch++) {
+            // Clear ROI Manager for this point
+            rm.reset();
+            
+            IJ.showMessage("Plant " + plant + " - Patch " + patch, 
+                          "Click 1 point on Plant " + plant + ", Patch " + patch + 
+                          "\nThen press 't' to add to ROI Manager");
+            
+            IJ.log("    Waiting for Patch " + patch + " point (press 't' to add)...");
+            
+            // Wait until a ROI appears in the ROI Manager
+            while (rm.getCount() == 0) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    // Continue waiting
+                }
+            }
+            
+            // Get the ROI from the manager
+            Roi roi = rm.getRoi(0);
+            
+            if (roi == null || !(roi instanceof PointRoi)) {
+                IJ.log("    WARNING: No valid point ROI for Plant " + plant + ", Patch " + patch);
+                continue;
+            }
+            
+            PointRoi pointRoi = (PointRoi) roi;
+            int nPoints = pointRoi.getNCoordinates();
+            
+            if (nPoints != 1) {
+                IJ.log("    WARNING: Expected 1 point but got " + nPoints + 
+                       " for Plant " + plant + ", Patch " + patch);
+                // Take the first point if multiple
+            }
+            
+            // Get coordinates
+            int[] xCoords = pointRoi.getXCoordinates();
+            int[] yCoords = pointRoi.getYCoordinates();
+            Rectangle bounds = pointRoi.getBounds();
+            
+            // Save coordinates as CSV
+            String csvPath = OUT_DIR + baseName + "_plant" + plant + "_patch" + patch + ".csv";
+            try {
+                PrintWriter pw = new PrintWriter(new FileWriter(csvPath));
+                pw.println("x,y");
+                int x = bounds.x + xCoords[0];
+                int y = bounds.y + yCoords[0];
+                pw.println(x + "," + y);
+                pw.close();
+                IJ.log("    Saved: " + baseName + "_plant" + plant + "_patch" + patch + 
+                       ".csv (x=" + x + ", y=" + y + ")");
+            } catch (IOException e) {
+                IJ.log("    ERROR saving CSV: " + e.getMessage());
+            }
         }
     }
     

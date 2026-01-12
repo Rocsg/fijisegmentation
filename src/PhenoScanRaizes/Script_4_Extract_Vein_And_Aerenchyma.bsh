@@ -25,17 +25,17 @@ import inra.ijpb.morphology.Strel3D;
 
 // Morphological parameters
 int FILL_RADIUS = 3;
-int OPENING_RADIUS = 16;
+int OPENING_RADIUS = 25;
 String BASE_DIR="";
 // Ask user for main directory
 
-boolean test=false;
+boolean test=true;
 if(!test){
 	DirectoryChooser dc = new DirectoryChooser("Select main project directory");
 	BASE_DIR = dc.getDirectory();
 }
 else{
-	BASE_DIR="/home/rfernandez/Bureau/A_Test/Aerenchyme/Test_CIAT/";
+	BASE_DIR="/Donnees/DD_CIRS626_DATA/Aerenchymes/Bug_and_tests/Paula_bug_2/Test_jan_2026/";
 }
 if (BASE_DIR == null) {
     IJ.error("No directory selected");
@@ -67,11 +67,17 @@ new File(DEBUG_CENTRAL_DIR).mkdirs();
 new File(DEBUG_ERODED_DIR).mkdirs();
 new File(DEBUG_OPENED_DIR).mkdirs();
 
+// Set foreground/background colors explicitly to avoid platform-specific issues
+IJ.run("Colors...", "foreground=white background=black selection=yellow");
+IJ.setForegroundColor(255, 255, 255);
+IJ.setBackgroundColor(0, 0, 0);
+
 IJ.log("\\Clear");
 IJ.log("=== Script 4: Extract Vein and Aerenchyma ===");
 IJ.log("Input:  " + IN_DIR);
 IJ.log("Output Vein: " + OUT_VEIN_DIR);
 IJ.log("Output Aerenchyma: " + OUT_AERENCHYMA_DIR);
+IJ.log("Foreground set to: 255 (white), Background set to: 0 (black)");
 
 // Get all tif files
 File[] files = inFolder.listFiles(new FilenameFilter() {
@@ -164,21 +170,35 @@ for (File file : files) {
         }
     }
     
-    // Find component closest to center
+    // Find component that contains the center point, or if none, the closest to center
     double cx0 = w / 2.0, cy0 = h / 2.0;
-    double bestDist = Double.MAX_VALUE;
-    int bestLabel = 0;
+    int centerX = (int) Math.round(cx0);
+    int centerY = (int) Math.round(cy0);
     
-    for (int L = 1; L <= lbl; L++) {
-        int cnt = (Integer) counts.get(L);
-        if (cnt == 0) continue;
-        double cx = (Double)sumX.get(L) / cnt;
-        double cy = (Double)sumY.get(L) / cnt;
-        double d2 = (cx - cx0) * (cx - cx0) + (cy - cy0) * (cy - cy0);
-        if (d2 < bestDist) {
-            bestDist = d2;
-            bestLabel = L;
+    // First, check if any component contains the center point
+    int bestLabel = 0;
+    if (centerX >= 0 && centerX < w && centerY >= 0 && centerY < h) {
+        bestLabel = labels[centerY][centerX];
+    }
+    
+    // If no component at center point, find the closest one
+    if (bestLabel == 0) {
+        IJ.log("  No component at center point, finding closest component");
+        double bestDist = Double.MAX_VALUE;
+        
+        for (int L = 1; L <= lbl; L++) {
+            int cnt = (Integer) counts.get(L);
+            if (cnt == 0) continue;
+            double cx = (Double)sumX.get(L) / cnt;
+            double cy = (Double)sumY.get(L) / cnt;
+            double d2 = (cx - cx0) * (cx - cx0) + (cy - cy0) * (cy - cy0);
+            if (d2 < bestDist) {
+                bestDist = d2;
+                bestLabel = L;
+            }
         }
+    } else {
+        IJ.log("  Selected component containing center point (label " + bestLabel + ")");
     }
     
     // Create mask with only central component

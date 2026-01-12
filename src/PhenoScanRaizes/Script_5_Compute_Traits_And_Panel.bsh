@@ -160,7 +160,7 @@ IJ.log("\n--- Writing CSV summary ---");
 String csvPath = OUT_DIR + "traits.csv";
 try {
     BufferedWriter writer = new BufferedWriter(new FileWriter(csvPath));
-    writer.write("Sample,Vein_Surface_Pixels,Aerenchyma_Surface_Pixels,Ratio_Aerenchyma_over_Vein\n");
+    writer.write("genotype,plot,plant,block,porc_aa_leaf,Vein_Surface_Pixels,Aerenchyma_Surface_Pixels\n");
     
     for (int i = 0; i < measurements.size(); i++) {
         Map m = (Map) measurements.get(i);
@@ -169,11 +169,41 @@ try {
         int aerPx = (Integer) m.get("aerenchymaPixels");
         double ratio = (Double) m.get("ratio");
         
-        writer.write(String.format("%s,%d,%d,%s\n", name, veinPx, aerPx, ""+ratio));
+        // Parse filename to extract plot and plant numbers
+        // Expected format: {plotName}_plant{X}_patch{Y}
+        String plotName = "";
+        int plantNum = 0;
+        String genotypeValue = "default";
+        String blockValue = "default";
+        
+        // Extract plant number
+        int plantIndex = name.indexOf("_plant");
+        if (plantIndex > 0) {
+            plotName = name.substring(0, plantIndex);
+            
+            // Extract plant number (between "_plant" and "_patch")
+            int patchIndex = name.indexOf("_patch", plantIndex);
+            if (patchIndex > 0) {
+                String plantStr = name.substring(plantIndex + 6, patchIndex);
+                try {
+                    plantNum = Integer.parseInt(plantStr);
+                } catch (NumberFormatException e) {
+                    IJ.log("  WARNING: Could not parse plant number from " + name);
+                }
+            }
+        } else {
+            // Fallback: use full name as plot, plant = 0
+            plotName = name;
+            plantNum = 0;
+        }
+        
+        // Write row: genotype (default), plot, plant, block (default), porc_aa_leaf, vein pixels, aerenchyma pixels
+        writer.write(String.format("%s,%s,%d,%s,%.6f,%d,%d\n", genotypeValue, plotName, plantNum, blockValue, ratio, veinPx, aerPx));
     }
     
     writer.close();
     IJ.log("CSV saved: " + csvPath);
+    IJ.log("Note: 'genotype' and 'block' columns contain 'default' - replace with appropriate values");
 } catch (IOException e) {
     IJ.error("Error writing CSV: " + e.getMessage());
 }

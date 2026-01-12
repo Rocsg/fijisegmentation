@@ -72,11 +72,15 @@ Map imageCache = new HashMap();
 
 for (File csvFile : csvFiles) {
     String csvName = csvFile.getName();
-    // Extract image name and patch number from filename (e.g., "image_1.csv")
+    // Extract image name from filename (e.g., "plot001_plant1_patch1.csv" -> "plot001")
     String baseName = csvName.substring(0, csvName.lastIndexOf('.'));
-    int lastUnderscore = baseName.lastIndexOf('_');
-    String imageName = baseName.substring(0, lastUnderscore);
-    String patchNum = baseName.substring(lastUnderscore + 1);
+    
+    // Find image name by looking for "_plant" pattern
+    String imageName = baseName;
+    int plantIndex = baseName.indexOf("_plant");
+    if (plantIndex > 0) {
+        imageName = baseName.substring(0, plantIndex);
+    }
     
     IJ.log("\nProcessing: " + csvName);
     

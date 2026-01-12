@@ -14,8 +14,15 @@ import trainableSegmentation.WekaSegmentation;
 import java.io.*;
 
 // Ask user for main directory
-DirectoryChooser dc = new DirectoryChooser("Select main project directory");
-String BASE_DIR = dc.getDirectory();
+boolean test=true;
+String BASE_DIR = "";
+if(test){
+    BASE_DIR="/Donnees/DD_CIRS626_DATA/Aerenchymes/Bug_and_tests/Paula_bug_2/Test_jan_2026/";
+}
+else {
+	DirectoryChooser dc = new DirectoryChooser("Select main project directory");
+	BASE_DIR=dc.getDirectory();
+}
 if (BASE_DIR == null) {
     IJ.error("No directory selected");
     return;
@@ -44,11 +51,17 @@ if (!outFolder.exists()) {
     outFolder.mkdirs();
 }
 
+// Set foreground/background colors explicitly to avoid platform-specific issues
+IJ.run("Colors...", "foreground=white background=black selection=yellow");
+IJ.setForegroundColor(255, 255, 255);
+IJ.setBackgroundColor(0, 0, 0);
+
 IJ.log("\\Clear");
 IJ.log("=== Script 3: Predict Segmentation ===");
 IJ.log("Input:  " + IN_DIR);
 IJ.log("Model:  " + MODEL_PATH);
 IJ.log("Output: " + OUT_DIR);
+IJ.log("Foreground set to: 255 (white), Background set to: 0 (black)");
 
 int classIndex = 0;
 

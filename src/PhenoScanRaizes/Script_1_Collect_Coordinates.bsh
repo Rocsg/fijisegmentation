@@ -55,7 +55,7 @@ if (files == null || files.length == 0) {
     return;
 }
 
-IJ.setTool("multipoint");
+IJ.setTool("point");
 
 // Get or create ROI Manager
 RoiManager rm = RoiManager.getInstance();
@@ -95,21 +95,26 @@ for (File file : files) {
     }
     
     imp.show();
-    IJ.setTool("multipoint");
+    IJ.setTool("point");
     
     // Collect points for 3 plants, 3 patches each
     for (int plant = 1; plant <= 3; plant++) {
         IJ.log("\n  === PLANT " + plant + " ===");
         
+        // Show message once per plant (before collecting its 3 patches)
+        IJ.showMessage("Plant " + plant, 
+                      "Now collect 3 points for Plant " + plant + "\n" +
+                      "(Patches 1, 2, and 3)\n\n" +
+                      "For each patch:\n" +
+                      "1. Click one point\n" +
+                      "2. Press 't' to add to ROI Manager\n\n" +
+                      "Follow the log window for progress.");
+        
         for (int patch = 1; patch <= 3; patch++) {
             // Clear ROI Manager for this point
             rm.reset();
             
-            IJ.showMessage("Plant " + plant + " - Patch " + patch, 
-                          "Click 1 point on Plant " + plant + ", Patch " + patch + 
-                          "\nThen press 't' to add to ROI Manager");
-            
-            IJ.log("    Waiting for Patch " + patch + " point (press 't' to add)...");
+            IJ.log("    Waiting for Plant " + plant + ", Patch " + patch + " (press 't' to add)...");
             
             // Wait until a ROI appears in the ROI Manager
             while (rm.getCount() == 0) {

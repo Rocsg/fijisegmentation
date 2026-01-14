@@ -160,7 +160,7 @@ IJ.log("\n--- Writing CSV summary ---");
 String csvPath = OUT_DIR + "traits.csv";
 try {
     BufferedWriter writer = new BufferedWriter(new FileWriter(csvPath));
-    writer.write("genotype,plot,plant,block,porc_aa_leaf,Vein_Surface_Pixels,Aerenchyma_Surface_Pixels\n");
+    writer.write("genotype,plot,plant,patch_number,block,porc_aa_leaf,Vein_Surface_Pixels,Aerenchyma_Surface_Pixels\n");
     
     for (int i = 0; i < measurements.size(); i++) {
         Map m = (Map) measurements.get(i);
@@ -169,14 +169,15 @@ try {
         int aerPx = (Integer) m.get("aerenchymaPixels");
         double ratio = (Double) m.get("ratio");
         
-        // Parse filename to extract plot and plant numbers
+        // Parse filename to extract plot, plant, and patch numbers
         // Expected format: {plotName}_plant{X}_patch{Y}
         String plotName = "";
         int plantNum = 0;
+        int patchNum = 0;
         String genotypeValue = "default";
         String blockValue = "default";
         
-        // Extract plant number
+        // Extract plant and patch numbers
         int plantIndex = name.indexOf("_plant");
         if (plantIndex > 0) {
             plotName = name.substring(0, plantIndex);
@@ -190,15 +191,24 @@ try {
                 } catch (NumberFormatException e) {
                     IJ.log("  WARNING: Could not parse plant number from " + name);
                 }
+                
+                // Extract patch number (after "_patch")
+                String patchStr = name.substring(patchIndex + 6);
+                try {
+                    patchNum = Integer.parseInt(patchStr);
+                } catch (NumberFormatException e) {
+                    IJ.log("  WARNING: Could not parse patch number from " + name);
+                }
             }
         } else {
-            // Fallback: use full name as plot, plant = 0
+            // Fallback: use full name as plot, plant = 0, patch = 0
             plotName = name;
             plantNum = 0;
+            patchNum = 0;
         }
         
-        // Write row: genotype (default), plot, plant, block (default), porc_aa_leaf, vein pixels, aerenchyma pixels
-        writer.write(String.format("%s,%s,%d,%s,%.6f,%d,%d\n", genotypeValue, plotName, plantNum, blockValue, ratio, veinPx, aerPx));
+        // Write row: genotype (default), plot, plant, patch_number, block (default), porc_aa_leaf, vein pixels, aerenchyma pixels
+        writer.write(String.format("%s,%s,%d,%d,%s,%.6f,%d,%d\n", genotypeValue, plotName, plantNum, patchNum, blockValue, ratio, veinPx, aerPx));
     }
     
     writer.close();

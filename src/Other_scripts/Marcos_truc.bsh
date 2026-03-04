@@ -1,0 +1,254 @@
+// Fiji / ImageJ BeanShell script
+// Batch apply Trainable Weka Segmentation model, save segmentation (DIR2)
+// and save original image with segmentation outline overlay (DIR3).
+
+/*
+String inDir   = "/home/marcos/Bureau/PACCS/2_training_validation_images";
+String outDir2 = "/home/marcos/Bureau/PACCS/2-export/Resultats/segmentation";
+String outDir3 = "/home/marcos/Bureau/PACCS/2-export/Resultats/validation";
+String csvPath = "/home/marcos/Bureau/PACCS/2-export/Resultats/output.csv";
+String modelPath = "/home/marcos/Bureau/PACCS/weka_segmentation.model";
+*/
+
+	String inDir   = "/home/marcos/Bureau/PACCS/1-Train_of_the_model/weka_training_images";
+	String outDir2 = "/home/marcos/Bureau/PACCS/1-Train_of_the_model/Verification_segmentation";
+	String outDir3 = "/home/marcos/Bureau/PACCS/1-Train_of_the_model/Verification_contours";
+	String csvPath = "/home/marcos/Bureau/PACCS/1-Train_of_the_model/output.csv";
+	String modelPath = "/home/marcos/Bureau/PACCS/1-Train_of_the_model/weka_segmentation_28_jan_2026.model";
+
+
+
+int NUM_CLASSE_SELECTED = 1;  // Class number to measure (0 or 1, Weka produces binary output)
+// ---------------------------------
+
+
+import ij.IJ;
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.process.ImageProcessor;
+import ij.process.ColorProcessor;
+import java.io.File;
+import trainableSegmentation.WekaSegmentation;
+import ij.plugin.frame.RoiManager;
+import ij.gui.Roi;
+import ij.io.RoiEncoder;
+import java.io.FileOutputStream;
+import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipEntry;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.util.ArrayList;
+import java.util.List;
+
+
+
+
+File inputFolder = new File(inDir);
+if (!inputFolder.exists() || !inputFolder.isDirectory()) {
+    IJ.error("Input folder does not exist: " + inDir);
+    return;
+}
+
+File outputFolder2 = new File(outDir2);
+if (!outputFolder2.exists()) outputFolder2.mkdirs();
+
+File outputFolder3 = new File(outDir3);
+if (!outputFolder3.exists()) outputFolder3.mkdirs();
+
+File[] files = inputFolder.listFiles();
+if (files == null || files.length == 0) {
+    IJ.error("No files found in: " + inDir);
+    return;
+}
+
+int nProcessed = 0;
+int nFailed = 0;
+WekaSegmentation weka =null;
+
+// List to store measurements for CSV
+List measurements = new ArrayList();
+
+for (int i = 0; i < files.length && i < 19; i++) {
+    IJ.log("Starting image " + (i + 1) + "/" + Math.min(files.length, 19));
+
+    File f = files[i];
+    if (f.isDirectory()) continue;
+
+    String name = f.getName().toLowerCase();
+    if (!(name.endsWith(".tif") || name.endsWith(".tiff") ||
+          name.endsWith(".png") || name.endsWith(".jpg") ||
+          name.endsWith(".jpeg") || name.endsWith(".bmp"))) {
+        continue;
+    }
+
+    ImagePlus imp = IJ.openImage(f.getAbsolutePath());
+    if (imp == null) continue;
+
+    try {
+        // ---------- Convert RGB to HSB and remap to RGB ----------
+        // Step 1: Convert to HSB stack
+        ImagePlus hsbImage = imp.duplicate();
+        IJ.run(hsbImage, "HSB Stack", "");
+        
+        // Get the three channels: H, S, B
+        ImageStack hsbStack = hsbImage.getStack();
+        ImageProcessor hueProc = hsbStack.getProcessor(1);     // H (Hue)
+        ImageProcessor satProc = hsbStack.getProcessor(2);     // S (Saturation)
+        ImageProcessor briProc = hsbStack.getProcessor(3);     // B (Brightness)
+        
+        // Step 2: Remap to RGB: R=Saturation, G=Brightness, B=Hue
+        int width = hueProc.getWidth();
+        int height = hueProc.getHeight();
+        ColorProcessor remappedProc = new ColorProcessor(width, height);
+        
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int h = hueProc.get(x, y);  // Hue
+                int s = satProc.get(x, y);  // Saturation
+                int b = briProc.get(x, y);  // Brightness
+                
+                // RGB remapping: R=S, G=B, B=H
+                int rgb = (s << 16) | (b << 8) | h;
+                remappedProc.set(x, y, rgb);
+            }
+        }
+        
+        ImagePlus remappedImage = new ImagePlus("remapped", remappedProc);
+        hsbImage.close();
+        
+        // ---------- Apply classifier on remapped image ----------
+        if (i == 0) {
+            weka = new WekaSegmentation(remappedImage);
+            weka.loadClassifier(modelPath);
+        }
+
+        ImagePlus seg = weka.applyClassifier(remappedImage, 0, false);
+        remappedImage.close();
+
+        // ---------- Measure pixels for selected class ----------
+        ImageProcessor segProc = seg.getProcessor();
+        int width = segProc.getWidth();
+        int height = segProc.getHeight();
+        int totalPixels = width * height;
+        int selectedClassPixels = 0;
+        
+        // Count pixels belonging to the selected class
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixelValue = segProc.getPixel(x, y);
+                if (pixelValue == NUM_CLASSE_SELECTED) {
+                    selectedClassPixels++;
+                }
+            }
+        }
+        
+        double ratio = (totalPixels > 0) ? ((double)selectedClassPixels / totalPixels) : 0.0;
+        
+        // Store measurement
+        String[] measurement = new String[4];
+        measurement[0] = name;
+        measurement[1] = String.valueOf(selectedClassPixels);
+        measurement[2] = String.valueOf(totalPixels);
+        measurement[3] = String.format(java.util.Locale.US, "%.6f", ratio);
+        measurements.add(measurement);
+        
+        IJ.log("  Pixels class " + NUM_CLASSE_SELECTED + ": " + selectedClassPixels + 
+               " / " + totalPixels + " (ratio: " + String.format("%.4f", ratio) + ")");
+
+        // ---------- Extract contours from binary segmentation ----------
+        // Convert to proper binary mask to avoid "Create Selection" dialog
+        ImagePlus binaryMask = seg.duplicate();
+        ImageProcessor bp = binaryMask.getProcessor();
+        
+        // Threshold to create binary mask: pixels == NUM_CLASSE_SELECTED become 255, others become 0
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int val = bp.getPixel(x, y);
+                bp.set(x, y, (val == NUM_CLASSE_SELECTED) ? 255 : 0);
+            }
+        }
+        
+        // Now we have a proper 8-bit binary mask, create selection
+        binaryMask.updateAndDraw();
+        IJ.run(binaryMask, "Create Selection", "");
+        Roi contourRoi = binaryMask.getRoi();
+        
+        // Cleanup binary mask
+        binaryMask.changes = false;
+        binaryMask.close();
+
+        // ---------- Save original image with ROI attached ----------
+        ImagePlus impWithRoi = imp.duplicate();
+        
+        if (contourRoi != null) {
+            impWithRoi.setRoi(contourRoi);
+            
+            // Save image with ROI attached (ROI will be embedded in TIFF)
+            String baseName = name.substring(0, name.lastIndexOf('.'));
+            String outImagePath = new File(outputFolder3, baseName + ".tif").getAbsolutePath();
+            
+            // Save the image with embedded ROI
+            IJ.saveAsTiff(impWithRoi, outImagePath);
+            
+            IJ.log("  [OK] Image+ROI: " + outImagePath);
+        } else {
+            // No ROI, just save the image
+            String outImagePath = new File(outputFolder3, name).getAbsolutePath();
+            if (!(outImagePath.toLowerCase().endsWith(".tif") || outImagePath.toLowerCase().endsWith(".tiff"))) {
+                outImagePath = outImagePath + ".tif";
+            }
+            IJ.saveAsTiff(impWithRoi, outImagePath);
+            IJ.log("  [OK] Image (no ROI): " + outImagePath);
+        }
+
+        // Cleanup
+        impWithRoi.changes = false;
+        impWithRoi.close();
+        
+        // ---------- Convert segmentation to 0-255 range and save ----------
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int val = segProc.getPixel(x, y);
+                segProc.set(x, y, val * 255);
+            }
+        }
+        seg.updateAndDraw();
+        
+        String outSegPath = new File(outputFolder2, name).getAbsolutePath();
+        if (!(outSegPath.toLowerCase().endsWith(".tif") || outSegPath.toLowerCase().endsWith(".tiff"))) {
+            outSegPath = outSegPath + ".tif";
+        }
+        IJ.saveAsTiff(seg, outSegPath);
+        IJ.log("  [OK] Seg: " + outSegPath);
+
+        seg.changes = false;
+        seg.close();
+
+        nProcessed++;
+
+    } catch (Exception e) {
+        IJ.log("  [FAIL] " + name + " ... " + e.toString());
+        nFailed++;
+    } finally {
+        imp.changes = false;
+        imp.close();
+    }
+}
+
+// ---------- Write CSV summary ----------
+try {
+    BufferedWriter writer = new BufferedWriter(new FileWriter(csvPath));
+    writer.write("Image_Name,Pixels_Class_" + NUM_CLASSE_SELECTED + ",Total_Pixels,Ratio\n");
+    
+    for (int i = 0; i < measurements.size(); i++) {
+        String[] m = (String[])measurements.get(i);
+        writer.write(m[0] + "," + m[1] + "," + m[2] + "," + m[3] + "\n");
+    }
+    
+    writer.close();
+    IJ.log("\n=== CSV Summary saved: " + csvPath + " ===");
+} catch (Exception e) {
+    IJ.log("ERROR writing CSV: " + e.toString());
+}
+
+IJ.log("Done. Processed: " + nProcessed + " ... Failed: " + nFailed);

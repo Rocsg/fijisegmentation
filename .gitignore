@@ -1,6 +1,7 @@
 ##############################
 ## Java
 ##############################
+launch.json
 *.class
 *.jar
 *.war
@@ -91,3 +92,4 @@ results/
 temp/
 tmp/
 
+.vscode/launch.json

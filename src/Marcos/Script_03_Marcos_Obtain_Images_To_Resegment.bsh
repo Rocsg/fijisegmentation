@@ -1,0 +1,130 @@
+// Fiji / ImageJ BeanShell script
+// Read resegmentation CSV and copy raw images marked for resegmentation
+
+import ij.IJ;
+import java.io.File;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
+
+// Ask user for CSV file
+String csvPath = IJ.getFilePath("Select resegmentation.csv file");
+if (csvPath == null) {
+    IJ.error("No CSV file selected");
+    return;
+}
+
+File csvFile = new File(csvPath);
+if (!csvFile.exists()) {
+    IJ.error("CSV file does not exist: " + csvPath);
+    return;
+}
+
+// Ask user for raw images directory
+String rawDir = IJ.getDirectory("Select folder with raw images");
+if (rawDir == null) {
+    IJ.error("No directory selected");
+    return;
+}
+
+File rawFolder = new File(rawDir);
+if (!rawFolder.exists() || !rawFolder.isDirectory()) {
+    IJ.error("Invalid directory: " + rawDir);
+    return;
+}
+
+// Create output directory (same location as CSV)
+File csvParent = csvFile.getParentFile();
+File outputFolder = new File(csvParent, "Images_To_Resegment");
+if (!outputFolder.exists()) outputFolder.mkdirs();
+
+// Read CSV and collect images to resegment
+List imagesToResegment = new ArrayList();
+
+try {
+    BufferedReader reader = new BufferedReader(new FileReader(csvFile));
+    String line = reader.readLine(); // Skip header line
+    
+    while ((line = reader.readLine()) != null) {
+        String[] parts = line.split(",");
+        if (parts.length >= 3) {
+            String imageName = parts[0];
+            String decision = parts[1];
+            
+            // Check if marked for resegmentation
+            if (decision.equals("Resegment please")) {
+                imagesToResegment.add(imageName);
+                IJ.log("Found image to resegment: " + imageName);
+            }
+        }
+    }
+    reader.close();
+} catch (Exception e) {
+    IJ.error("ERROR reading CSV: " + e.toString());
+    return;
+}
+
+IJ.log("\n=== Found " + imagesToResegment.size() + " images to resegment ===\n");
+
+if (imagesToResegment.size() == 0) {
+    IJ.log("No images need resegmentation. Done!");
+    return;
+}
+
+// Get all files from raw directory
+File[] rawFiles = rawFolder.listFiles();
+if (rawFiles == null || rawFiles.length == 0) {
+    IJ.error("No files found in raw directory: " + rawDir);
+    return;
+}
+
+// Copy images that need resegmentation
+int copiedCount = 0;
+int notFoundCount = 0;
+
+for (int i = 0; i < imagesToResegment.size(); i++) {
+    String targetName = (String)imagesToResegment.get(i);
+    
+    // Remove "_composite" suffix if present to find original raw image
+    String rawName = targetName;
+    if (rawName.endsWith("_composite.tif")) {
+        rawName = rawName.replace("_composite.tif", ".tif");
+    } else if (rawName.endsWith("_composite.tiff")) {
+        rawName = rawName.replace("_composite.tiff", ".tiff");
+    }
+    
+    // Search for the file in raw directory
+    boolean found = false;
+    for (int j = 0; j < rawFiles.length; j++) {
+        File rawFile = rawFiles[j];
+        if (rawFile.isDirectory()) continue;
+        
+        if (rawFile.getName().equals(rawName)) {
+            // Found the file, copy it
+            File destFile = new File(outputFolder, rawFile.getName());
+            
+            try {
+                java.nio.file.Files.copy(rawFile.toPath(), destFile.toPath(), 
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                IJ.log("Copied: " + rawFile.getName());
+                copiedCount++;
+                found = true;
+                break;
+            } catch (Exception e) {
+                IJ.log("ERROR copying " + rawFile.getName() + ": " + e.toString());
+            }
+        }
+    }
+    
+    if (!found) {
+        IJ.log("WARNING: Could not find raw image for: " + targetName + " (looking for: " + rawName + ")");
+        notFoundCount++;
+    }
+}
+
+IJ.log("\n=== SUMMARY ===");
+IJ.log("Images copied: " + copiedCount);
+IJ.log("Images not found: " + notFoundCount);
+IJ.log("Output folder: " + outputFolder.getAbsolutePath());
+IJ.log("Done!");

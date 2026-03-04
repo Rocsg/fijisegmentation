@@ -1,0 +1,379 @@
+// Fiji / ImageJ BeanShell script
+// Re-measure segmentations excluding dead plant quadrants
+// Each image contains a 3x3 grid of 9 plants
+// missing_plant_treatment.csv indicates which plants are dead per genotype
+// The script recalculates pixel counts excluding those quadrants
+
+import ij.IJ;
+import ij.ImagePlus;
+import ij.process.ImageProcessor;
+import java.io.File;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.List;
+
+// --------- USER SETTINGS ----------
+String baseDir = "/home/rfernandez/Bureau/A_Test/Marcos/5-missing_plant_treatment/1-Uncount_dead_plants";
+String imageDir = baseDir + "/Output_Segmentations_all";
+String csvInputPath = baseDir + "/measurements_summary_all.csv";
+String missingPath = baseDir + "/missing_plant_treatment.csv";
+String csvOutputPath = baseDir + "/measurements_without_dead_plants.csv";
+String correctedImagesDir = baseDir + "/Corrected_segmentations";
+// ---------------------------------
+
+// Create output directory for corrected images
+File correctedDir = new File(correctedImagesDir);
+if (!correctedDir.exists()) {
+    correctedDir.mkdirs();
+    IJ.log("Created directory: " + correctedImagesDir);
+}
+
+IJ.log("=== Removing Dead Plants from Measurements ===");
+IJ.log("Base directory: " + baseDir);
+IJ.log("Image directory: " + imageDir);
+IJ.log("Input CSV: " + csvInputPath);
+IJ.log("Missing plants CSV: " + missingPath);
+IJ.log("Output CSV: " + csvOutputPath);
+IJ.log("");
+
+// --- Step 1: Read missing_plant_treatment.csv ---
+// Format: plantName;missingPlants (e.g. "c_2_ps_situ_bangedit;3;7" or "c_2_ps_situ_bangedit;3")
+// Column 1: plant name pattern, Column 2+: missing plant numbers separated by ;
+
+HashMap missingMap = new LinkedHashMap(); // plantName -> list of missing plant numbers
+
+File missingFile = new File(missingPath);
+if (!missingFile.exists()) {
+    IJ.error("Missing plant CSV not found: " + missingPath);
+    return;
+}
+
+IJ.log("=== Reading missing_plant_treatment.csv ===");
+int missingLineCount = 0;
+
+try {
+    BufferedReader reader = new BufferedReader(new FileReader(missingFile));
+    String headerLine = reader.readLine(); // Skip header
+    IJ.log("Missing CSV Header: " + headerLine);
+    
+    String sep = ",";
+    IJ.log("Separator: '" + sep + "'");
+    
+    String line;
+    while ((line = reader.readLine()) != null) {
+        missingLineCount++;
+        if (line.trim().isEmpty()) continue;
+        
+        // Handle CSV with quotes: "name";"7;9" or name;7;9
+        // Remove all quotes first
+        line = line.replace("\"", "");
+        
+        String[] parts = line.split(sep);
+        if (parts.length < 2) {
+            IJ.log("Missing line " + missingLineCount + ": Not enough columns, skipping: " + line);
+            continue;
+        }
+        
+        String plantName = parts[0].trim();
+        List missingNums = new ArrayList();
+       
+        // All columns after the first are missing plant numbers
+        // They could be: "7;9" (becomes 7;9 after quote removal) or separate columns
+        for (int k = 1; k < parts.length; k++) {
+            String val = parts[k].trim();
+            if (val.isEmpty()) continue;
+            
+            // Could contain multiple numbers separated by ; even after split
+            // This handles cases like: name;7;9 or name;"7;9" (now name;7;9)
+            String[] subParts = val.split(";");
+            for (int s = 0; s < subParts.length; s++) {
+                String sub = subParts[s].trim();
+                if (!sub.isEmpty()) {
+                    try {
+                        int num = Integer.parseInt(sub);
+                        if (num >= 1 && num <= 9) {
+                            missingNums.add(num);
+                        } else {
+                            IJ.log("Missing line " + missingLineCount + ": Ignoring out-of-range value '" + num + "' (must be 1-9)");
+                        }
+                    } catch (NumberFormatException e) {
+                        IJ.log("Missing line " + missingLineCount + ": Ignoring non-numeric value '" + sub + "'");
+                    }
+                }
+            }
+        }
+        
+        missingMap.put(plantName, missingNums);
+        
+        String numsStr = "";
+        for (int k = 0; k < missingNums.size(); k++) {
+            if (k > 0) numsStr += ", ";
+            numsStr += missingNums.get(k);
+        }
+        IJ.log("Missing line " + missingLineCount + ": Plant '" + plantName + "' -> missing quadrants: [" + numsStr + "]");
+    }
+    reader.close();
+    IJ.log("\nTotal missing plant entries: " + missingMap.size() + "\n");
+} catch (Exception e) {
+    IJ.error("Error reading missing plant CSV: " + e.toString());
+    return;
+}
+    String sep = ",";
+
+// --- Step 2: Read measurements_summary_all.csv ---
+// Detect separator and read all entries
+File csvInputFile = new File(csvInputPath);
+if (!csvInputFile.exists()) {
+    IJ.error("Input CSV not found: " + csvInputPath);
+    return;
+}
+
+IJ.log("=== Reading measurements_summary_all.csv ===");
+
+String csvHeader = "";
+String csvSep = ";";
+List csvImageNames = new ArrayList();
+List csvLines = new ArrayList(); // Full original lines
+
+try {
+    BufferedReader reader = new BufferedReader(new FileReader(csvInputFile));
+    csvHeader = reader.readLine();
+    IJ.log("CSV Header: " + csvHeader);
+    csvSep = ";";
+    IJ.log("CSV Separator: '" + csvSep + "'");
+    
+    String line;
+    int lineCount = 0;
+    while ((line = reader.readLine()) != null) {
+        lineCount++;
+        if (line.trim().isEmpty()) continue;
+        csvLines.add(line);
+        
+        // Extract image name (first column)
+        String[] lineParts = line.split(";");
+        if (lineParts.length > 0) {
+            csvImageNames.add(lineParts[0].trim());
+        } else {
+            // Empty line: use whole line to keep lists in sync
+            csvImageNames.add(line.trim());
+        }
+    }
+    reader.close();
+    IJ.log("Total measurement lines: " + lineCount + "\n");
+} catch (Exception e) {
+    IJ.error("Error reading input CSV: " + e.toString());
+    return;
+}
+
+// --- Step 3: For each missing plant entry, find matching images and re-measure ---
+IJ.log("=== Processing missing plants ===\n");
+
+// Map to store updated measurements: imageName -> new line
+HashMap updatedLines = new LinkedHashMap();
+
+Object[] plantNames = missingMap.keySet().toArray();
+
+for (int p = 0; p < plantNames.length; p++) {
+    String plantName = (String)plantNames[p];
+    List missingNums = (List)missingMap.get(plantName);
+    String plantNameLower = plantName.toLowerCase();
+    
+    String numsStr = "";
+    for (int k = 0; k < missingNums.size(); k++) {
+        if (k > 0) numsStr += ", ";
+        numsStr += missingNums.get(k);
+    }
+    
+    IJ.log("--- Plant pattern: '" + plantName + "' | Missing quadrants: [" + numsStr + "] ---");
+    
+    // Find all matching images (case-insensitive)
+    List matchingImages = new ArrayList();
+    List matchingIndices = new ArrayList();
+    
+    for (int i = 0; i < csvImageNames.size(); i++) {
+        String imgName = (String)csvImageNames.get(i);
+        if (imgName.toLowerCase().contains(plantNameLower)) {
+            matchingImages.add(imgName);
+            matchingIndices.add(i);
+        }
+    }
+    
+    IJ.log("  Found " + matchingImages.size() + " matching images:");
+    for (int i = 0; i < matchingImages.size(); i++) {
+        IJ.log("    - " + matchingImages.get(i));
+    }
+    
+    // Process each matching image
+    for (int m = 0; m < matchingImages.size(); m++) {
+        String imgName = (String)matchingImages.get(m);
+        int csvIdx = (Integer)matchingIndices.get(m);
+        
+        // Parse original CSV line
+        String originalLine = (String)csvLines.get(csvIdx);
+        String[] origParts = originalLine.split(";");
+        
+        String origPixelsStr = origParts.length > 1 ? origParts[1].trim() : "0";
+        String origTotalStr = origParts.length > 2 ? origParts[2].trim() : "0";
+        String origRatioStr = origParts.length > 3 ? origParts[3].trim() : "0";
+        
+        // Open the segmentation image
+        // Construct expected filename: CSV has .jpg, actual files are .jpg.tif
+        File imgFolder = new File(imageDir);
+        File imgFile = new File(imgFolder, imgName + ".tif");
+        
+        if (!imgFile.exists()) {
+            IJ.log("  [WARN] Image file not found: " + imgFile.getAbsolutePath() + ", skipping");
+            continue;
+        }
+        
+        ImagePlus imp = IJ.openImage(imgFile.getAbsolutePath());
+        if (imp == null) {
+            IJ.log("  [WARN] Could not open image: " + imgFile.getAbsolutePath());
+            continue;
+        }
+        
+        ImageProcessor ip = imp.getProcessor();
+        int width = ip.getWidth();
+        int height = ip.getHeight();
+        
+        // Create a duplicate for marking excluded quadrants
+        ImagePlus impCopy = imp.duplicate();
+        ImageProcessor ipCopy = impCopy.getProcessor();
+        
+        // Calculate quadrant dimensions (3x3 grid)
+        int quadW = width / 3;
+        int quadH = height / 3;
+        
+        // Quadrant numbering (reading order: left to right, top to bottom):
+        // 1 2 3
+        // 4 5 6
+        // 7 8 9
+        
+        // Count pixels for all quadrants and for included quadrants only
+        int totalPixelsAll = 0;
+        int whitePixelsAll = 0;
+        int totalPixelsIncluded = 0;
+        int whitePixelsIncluded = 0;
+        
+        for (int q = 1; q <= 9; q++) {
+            // Determine quadrant bounds
+            int col = (q - 1) % 3;   // 0, 1, 2
+            int row = (q - 1) / 3;   // 0, 1, 2
+            
+            int xStart = col * quadW;
+            int yStart = row * quadH;
+            int xEnd = (col == 2) ? width : (col + 1) * quadW;   // Last column gets remaining pixels
+            int yEnd = (row == 2) ? height : (row + 1) * quadH;  // Last row gets remaining pixels
+            
+            int quadTotal = 0;
+            int quadWhite = 0;
+            
+            for (int y = yStart; y < yEnd; y++) {
+                for (int x = xStart; x < xEnd; x++) {
+                    quadTotal++;
+                    int val = ip.getPixel(x, y);
+                    if (val == 255) {
+                        quadWhite++;
+                    }
+                }
+            }
+            
+            totalPixelsAll += quadTotal;
+            whitePixelsAll += quadWhite;
+            
+            // Check if this quadrant is excluded
+            boolean excluded = false;
+            for (int k = 0; k < missingNums.size(); k++) {
+                if ((Integer)missingNums.get(k) == q) {
+                    excluded = true;
+                    break;
+                }
+            }
+            
+            if (!excluded) {
+                totalPixelsIncluded += quadTotal;
+                whitePixelsIncluded += quadWhite;
+            } else {
+                // Mark excluded quadrant: set background pixels (0) to 122
+                for (int y = yStart; y < yEnd; y++) {
+                    for (int x = xStart; x < xEnd; x++) {
+                        int val = ipCopy.getPixel(x, y);
+                        if (val == 0) {
+                            ipCopy.putPixel(x, y, 122);
+                        }
+                    }
+                }
+            }
+        }
+        
+        double ratioAll = (totalPixelsAll > 0) ? ((double)whitePixelsAll / totalPixelsAll) : 0.0;
+        double ratioIncluded = (totalPixelsIncluded > 0) ? ((double)whitePixelsIncluded / totalPixelsIncluded) : 0.0;
+        
+        IJ.log("  Image: " + imgName);
+        IJ.log("    Original (all quadrants):  white=" + whitePixelsAll + " total=" + totalPixelsAll + 
+               " ratio=" + String.format(java.util.Locale.US, "%.6f", ratioAll));
+        IJ.log("    CSV original values:       white=" + origPixelsStr + " total=" + origTotalStr + " ratio=" + origRatioStr);
+        IJ.log("    Excluded quadrants: [" + numsStr + "]");
+        IJ.log("    Without dead plants:       white=" + whitePixelsIncluded + " total=" + totalPixelsIncluded + 
+               " ratio=" + String.format(java.util.Locale.US, "%.6f", ratioIncluded));
+        
+        // Build updated line
+        String newLine = imgName + csvSep + whitePixelsIncluded + csvSep + totalPixelsIncluded + csvSep + 
+                         String.format(java.util.Locale.US, "%.6f", ratioIncluded);
+        updatedLines.put(imgName, newLine);
+        
+        // Save corrected image with marked excluded quadrants
+        String outputPath = correctedImagesDir + "/" + imgName + ".tif";
+        IJ.saveAs(impCopy, "Tiff", outputPath);
+        IJ.log("    Saved corrected image: " + outputPath);
+        
+        imp.changes = false;
+        imp.close();
+        impCopy.changes = false;
+        impCopy.close();
+    }
+    
+    IJ.log("");
+}
+
+// --- Step 4: Write output CSV ---
+IJ.log("=== Writing output CSV ===");
+
+try {
+    BufferedWriter writer = new BufferedWriter(new FileWriter(csvOutputPath));
+    writer.write(csvHeader);
+    writer.newLine();
+    
+    int updatedCount = 0;
+    int keptCount = 0;
+    
+    for (int i = 0; i < csvLines.size(); i++) {
+        String imgName = (String)csvImageNames.get(i);
+        
+        if (updatedLines.containsKey(imgName)) {
+            writer.write((String)updatedLines.get(imgName));
+            updatedCount++;
+        } else {
+            writer.write((String)csvLines.get(i));
+            keptCount++;
+        }
+        writer.newLine();
+    }
+    
+    writer.close();
+    
+    IJ.log("Output CSV saved: " + csvOutputPath);
+    IJ.log("\n=== SUMMARY ===");
+    IJ.log("Total images in output: " + csvLines.size());
+    IJ.log("Images updated (dead plants removed): " + updatedCount);
+    IJ.log("Images kept unchanged: " + keptCount);
+    IJ.log("Done!");
+    
+} catch (Exception e) {
+    IJ.error("Error writing output CSV: " + e.toString());
+}

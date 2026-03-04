@@ -1,0 +1,85 @@
+// Fiji / ImageJ BeanShell script
+// Lists images ordered by modification time and displays their pixel size calibration
+
+// --------- USER SETTINGS ----------
+String inDir = "/media/rfernandez/Crucial X9/Test_Laura_2026_01_Name_Magni/Aerobico";
+// ---------------------------------
+
+import ij.IJ;
+import ij.ImagePlus;
+import ij.measure.Calibration;
+import java.io.File;
+import java.util.Arrays;
+import java.util.Comparator;
+
+File inputFolder = new File(inDir);
+if (!inputFolder.exists() || !inputFolder.isDirectory()) {
+    IJ.error("Input folder does not exist: " + inDir);
+    return;
+}
+
+File[] files = inputFolder.listFiles();
+if (files == null || files.length == 0) {
+    IJ.error("No files found in: " + inDir);
+    return;
+}
+
+// Filter only TIFF files
+java.util.List tiffFiles = new java.util.ArrayList();
+for (File f : files) {
+    if (!f.isDirectory()) {
+        String name = f.getName().toLowerCase();
+        if (name.endsWith(".tif") || name.endsWith(".tiff")) {
+            tiffFiles.add(f);
+        }
+    }
+}
+
+if (tiffFiles.size() == 0) {
+    IJ.error("No TIFF files found in: " + inDir);
+    return;
+}
+
+// Sort by modification time (oldest first)
+File[] sortedFiles = (File[]) tiffFiles.toArray(new File[tiffFiles.size()]);
+Arrays.sort(sortedFiles, new Comparator() {
+    public int compare(Object o1, Object o2) {
+        File f1 = (File) o1;
+        File f2 = (File) o2;
+        long diff = f1.lastModified() - f2.lastModified();
+        if (diff < 0) return -1;
+        if (diff > 0) return 1;
+        return 0;
+    }
+});
+
+IJ.log("\\Clear");
+IJ.log("=== Images ordered by modification time ===");
+IJ.log("Directory: " + inDir);
+IJ.log("");
+
+for (File f : sortedFiles) {
+    String name = f.getName();
+    
+    ImagePlus imp = IJ.openImage(f.getAbsolutePath());
+    if (imp == null) {
+        IJ.log(name + " | ERROR: Cannot open");
+        continue;
+    }
+
+    try {
+        Calibration cal = imp.getCalibration();
+        double pixelSize = cal.pixelWidth;
+        String unit = cal.getUnit();
+        
+        IJ.log(name + " | " + pixelSize + " | " + unit);
+        
+    } catch (Exception e) {
+        IJ.log(name + " | ERROR: " + e.toString());
+    } finally {
+        imp.close();
+    }
+}
+
+IJ.log("");
+IJ.log("=== Done ===");

@@ -6,6 +6,44 @@
     "configurations": [
         {
             "type": "java",
+            "name": "MakeFuseMediumsAndVessels",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.tillers_maze.MakeFuseMediumsAndVessels",
+            "projectName": "segmentation",
+            "vmArgs": "-Xmx45G"
+        
+        },
+        {
+            "type": "java",
+            "name": "FuseRGB",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.tillers_maze.FuseRGB",
+            "projectName": "segmentation",
+            "vmArgs": "-Xmx48G"
+        },
+        {
+            "type": "java",
+            "name": "PrepareRaw",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.tillers_maze.PrepareRaw",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "TimeLapseXylems",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.tillers_maze.TimeLapseXylems",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
+            "name": "Test",
+            "request": "launch",
+            "mainClass": "io.github.rocsg.segmentation.aerenchyme.tillers_maze.Test",
+            "projectName": "segmentation"
+        },
+        {
+            "type": "java",
             "name": "SplitRoiPoints",
             "request": "launch",
             "mainClass": "io.github.rocsg.segmentation.drone.SplitRoiPoints",

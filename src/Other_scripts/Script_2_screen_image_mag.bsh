@@ -1,0 +1,93 @@
+// Fiji / ImageJ BeanShell script
+// Compile magnification results from individual CSV files into one summary
+
+import ij.*;
+import ij.io.*;
+import java.io.*;
+
+// Ask user for target directory (clicks)
+DirectoryChooser dcTarget = new DirectoryChooser("Select target directory (clicks)");
+String TARGET_DIR = dcTarget.getDirectory();
+if (TARGET_DIR == null) {
+    IJ.error("No target directory selected");
+    return;
+}
+
+// Get all CSV files
+File targetFolder = new File(TARGET_DIR);
+File[] csvFiles = targetFolder.listFiles(new FilenameFilter() {
+    public boolean accept(File dir, String name) {
+        return name.toLowerCase().endsWith(".csv");
+    }
+});
+
+if (csvFiles == null || csvFiles.length == 0) {
+    IJ.error("No CSV files found in target directory");
+    return;
+}
+
+// Sort files alphabetically
+java.util.Arrays.sort(csvFiles, new java.util.Comparator() {
+    public int compare(Object o1, Object o2) {
+        File f1 = (File) o1;
+        File f2 = (File) o2;
+        return f1.getName().compareTo(f2.getName());
+    }
+});
+
+IJ.log("\\Clear");
+IJ.log("=== Compiling magnification results ===");
+IJ.log("Target: " + TARGET_DIR);
+IJ.log("CSV files found: " + csvFiles.length);
+
+// Prepare output
+// Get parent directory and folder name for output
+File parentFolder = targetFolder.getParentFile();
+String folderName = targetFolder.getName();
+String outputPath = parentFolder.getAbsolutePath() + File.separator + folderName + "_magnification_summary.csv";
+
+// Collect results
+java.util.List results = new java.util.ArrayList();
+
+for (File csvFile : csvFiles) {
+    try {
+        BufferedReader reader = new BufferedReader(new FileReader(csvFile));
+        
+        // Skip header
+        String header = reader.readLine();
+        
+        // Read data line
+        String dataLine = reader.readLine();
+        if (dataLine != null) {
+            results.add(dataLine);
+            IJ.log("Read: " + csvFile.getName() + " -> " + dataLine);
+        }
+        
+        reader.close();
+    } catch (IOException e) {
+        IJ.log("ERROR reading " + csvFile.getName() + ": " + e.getMessage());
+    }
+}
+
+// Write summary CSV
+try {
+    PrintWriter writer = new PrintWriter(new FileWriter(outputPath));
+    writer.println("image,magnification");
+    
+    for (int i = 0; i < results.size(); i++) {
+        writer.println((String) results.get(i));
+    }
+    
+    writer.close();
+    
+    IJ.log("\n=== Summary saved ===");
+    IJ.log("Output: " + outputPath);
+    IJ.log("Total entries: " + results.size());
+    
+    IJ.showMessage("Compilation Complete", 
+                   "Summary saved to:\n" + outputPath + "\n\n" +
+                   "Total entries: " + results.size());
+    
+} catch (IOException e) {
+    IJ.error("ERROR writing summary CSV: " + e.getMessage());
+}

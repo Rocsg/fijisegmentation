@@ -1,0 +1,184 @@
+// Fiji / ImageJ BeanShell script
+// Screen images to classify magnification (10x or 20x) by clicking
+
+import ij.*;
+import ij.io.*;
+import ij.gui.*;
+import ij.plugin.frame.RoiManager;
+import java.io.*;
+import java.awt.*;
+
+// Ask user for source directory (images)
+DirectoryChooser dcSource = new DirectoryChooser("Select source directory (images)");
+String SOURCE_DIR = dcSource.getDirectory();
+if (SOURCE_DIR == null) {
+    IJ.error("No source directory selected");
+    return;
+}
+
+// Ask user for target directory (clicks/results)
+DirectoryChooser dcTarget = new DirectoryChooser("Select target directory (clicks)");
+String TARGET_DIR = dcTarget.getDirectory();
+if (TARGET_DIR == null) {
+    IJ.error("No target directory selected");
+    return;
+}
+
+// Create target directory if needed
+File targetFolder = new File(TARGET_DIR);
+if (!targetFolder.exists()) {
+    targetFolder.mkdirs();
+}
+
+// Get all image files
+File sourceFolder = new File(SOURCE_DIR);
+File[] files = sourceFolder.listFiles(new FilenameFilter() {
+    public boolean accept(File dir, String name) {
+        String lower = name.toLowerCase();
+        return lower.endsWith(".tif") || lower.endsWith(".tiff") || 
+               lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg");
+    }
+});
+
+if (files == null || files.length == 0) {
+    IJ.error("No image files found");
+    return;
+}
+
+// Sort files alphabetically
+java.util.Arrays.sort(files, new java.util.Comparator() {
+    public int compare(Object o1, Object o2) {
+        File f1 = (File) o1;
+        File f2 = (File) o2;
+        return f1.getName().compareTo(f2.getName());
+    }
+});
+
+IJ.log("\\Clear");
+IJ.log("=== Screening magnification ===");
+IJ.log("Source: " + SOURCE_DIR);
+IJ.log("Target: " + TARGET_DIR);
+IJ.log("Images found: " + files.length);
+
+// Get or create ROI Manager
+RoiManager rm = RoiManager.getInstance();
+if (rm == null) {
+    rm = new RoiManager();
+}
+
+// Define click zones (top left corner)
+int BOX_SIZE = 80;
+int BOX_MARGIN = 10;
+Rectangle zone20x = new Rectangle(BOX_MARGIN, BOX_MARGIN, BOX_SIZE, BOX_SIZE);
+Rectangle zone10x = new Rectangle(BOX_MARGIN, BOX_MARGIN + BOX_SIZE + 10, BOX_SIZE, BOX_SIZE);
+
+for (File file : files) {
+    String filename = file.getName();
+    String baseName = filename.substring(0, filename.lastIndexOf('.'));
+    
+    // Check if already processed
+    File csvFile = new File(TARGET_DIR + baseName + ".csv");
+    if (csvFile.exists()) {
+        IJ.log("Skipping " + filename + " (already processed)");
+        continue;
+    }
+    
+    IJ.log("\nProcessing: " + filename);
+    
+    // Open image
+    ImagePlus imp = IJ.openImage(file.getAbsolutePath());
+    if (imp == null) {
+        IJ.log("  ERROR: Could not open " + filename);
+        continue;
+    }
+    
+    imp.show();
+    IJ.setTool("point");
+    
+    // Draw overlay boxes
+    Overlay overlay = new Overlay();
+    
+    // 20x box
+    Roi roi20x = new Roi(zone20x);
+    roi20x.setStrokeColor(Color.RED);
+    roi20x.setStrokeWidth(3);
+    overlay.add(roi20x);
+    
+    TextRoi text20x = new TextRoi(BOX_MARGIN + 5, BOX_MARGIN + 35, "20x");
+    text20x.setStrokeColor(Color.RED);
+    Font font = new Font("SansSerif", Font.BOLD, 24);
+    text20x.setCurrentFont(font);
+    overlay.add(text20x);
+    
+    // 10x box
+    Roi roi10x = new Roi(zone10x);
+    roi10x.setStrokeColor(Color.BLUE);
+    roi10x.setStrokeWidth(3);
+    overlay.add(roi10x);
+    
+    TextRoi text10x = new TextRoi(BOX_MARGIN + 5, zone10x.y + 35, "10x");
+    text10x.setStrokeColor(Color.BLUE);
+    text10x.setCurrentFont(font);
+    overlay.add(text10x);
+    
+    imp.setOverlay(overlay);
+    
+    // Clear ROI Manager
+    rm.reset();
+    
+    IJ.log("  Click on 20x or 10x box, then press 't'");
+    
+    // Wait for user to add point to ROI Manager
+    while (rm.getCount() == 0) {
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            // Continue waiting
+        }
+    }
+    
+    // Get the clicked point
+    Roi roi = rm.getRoi(0);
+    if (roi == null || !(roi instanceof PointRoi)) {
+        IJ.log("  WARNING: No valid point ROI");
+        imp.close();
+        continue;
+    }
+    
+    PointRoi pointRoi = (PointRoi) roi;
+    int[] xCoords = pointRoi.getXCoordinates();
+    int[] yCoords = pointRoi.getYCoordinates();
+    Rectangle bounds = pointRoi.getBounds();
+    
+    int clickX = bounds.x + xCoords[0];
+    int clickY = bounds.y + yCoords[0];
+    
+    // Determine which zone was clicked
+    String magnification = "";
+    if (zone20x.contains(clickX, clickY)) {
+        magnification = "20x";
+        IJ.log("  Selected: 20x");
+    } else if (zone10x.contains(clickX, clickY)) {
+        magnification = "10x";
+        IJ.log("  Selected: 10x");
+    } else {
+        IJ.log("  WARNING: Click outside zones, defaulting to 20x");
+        magnification = "20x";
+    }
+    
+    // Save to CSV
+    try {
+        PrintWriter writer = new PrintWriter(new FileWriter(csvFile));
+        writer.println("image,magnification");
+        writer.println(filename + "," + magnification);
+        writer.close();
+        IJ.log("  Saved: " + baseName + ".csv");
+    } catch (IOException e) {
+        IJ.log("  ERROR saving CSV: " + e.getMessage());
+    }
+    
+    imp.close();
+}
+
+IJ.log("\n=== Completed ===");
+IJ.showMessage("Screening Complete", "All images processed");

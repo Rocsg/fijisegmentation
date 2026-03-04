@@ -1,0 +1,235 @@
+// Fiji / ImageJ BeanShell script
+// Interactive image review for segmentation quality control
+// User clicks on "Resegment please" or "This is good" zones, presses T to add ROI
+// Script detects click position and copies images needing resegmentation
+
+import ij.IJ;
+import ij.ImagePlus;
+import ij.gui.Roi;
+import ij.gui.Overlay;
+import ij.gui.TextRoi;
+import ij.plugin.frame.RoiManager;
+import java.io.File;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.awt.Color;
+import java.awt.Font;
+
+// Ask user for input directory
+String inDir = IJ.getDirectory("Select folder with magenta segmentation images");
+if (inDir == null) {
+    IJ.error("No directory selected");
+    return;
+}
+
+File inputFolder = new File(inDir);
+if (!inputFolder.exists() || !inputFolder.isDirectory()) {
+    IJ.error("Invalid directory: " + inDir);
+    return;
+}
+
+// Create output directory for resegmentation
+File parentFolder = inputFolder.getParentFile();
+File resegFolder = new File(parentFolder, "Resegmentation");
+if (!resegFolder.exists()) resegFolder.mkdirs();
+
+// Get all image files
+File[] files = inputFolder.listFiles();
+if (files == null || files.length == 0) {
+    IJ.error("No files found in: " + inDir);
+    return;
+}
+
+// List to store results
+List results = new ArrayList();
+
+// Check if CSV exists and load already processed images (CSV in parent folder)
+String csvPath = new File(parentFolder, "resegmentation.csv").getAbsolutePath();
+List processedImages = new ArrayList();
+File csvFile = new File(csvPath);
+
+if (csvFile.exists()) {
+    IJ.log("Found existing CSV, loading already processed images...");
+    try {
+        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(csvFile));
+        String line = reader.readLine(); // Skip header
+        
+        while ((line = reader.readLine()) != null) {
+            String[] parts = line.split(",");
+            if (parts.length >= 3) {
+                processedImages.add(parts[0]); // Store image name
+                
+                // Add to results list
+                String[] result = new String[3];
+                result[0] = parts[0];
+                result[1] = parts[1];
+                result[2] = parts[2];
+                results.add(result);
+            }
+        }
+        reader.close();
+        IJ.log("Loaded " + processedImages.size() + " already processed images");
+    } catch (Exception e) {
+        IJ.log("ERROR reading existing CSV: " + e.toString());
+    }
+}
+
+// Initialize ROI Manager
+RoiManager rm = RoiManager.getInstance();
+if (rm == null) {
+    rm = new RoiManager();
+}
+
+int imageCount = 0;
+int resegmentCount = 0;
+
+for (int i = 0; i < files.length; i++) {
+    File f = files[i];
+    if (f.isDirectory()) continue;
+
+    String name = f.getName().toLowerCase();
+    if (!(name.endsWith(".tif") || name.endsWith(".tiff") ||
+          name.endsWith(".png") || name.endsWith(".jpg") ||
+          name.endsWith(".jpeg") || name.endsWith(".bmp"))) {
+        continue;
+    }
+
+    // Skip if already processed
+    if (processedImages.contains(f.getName())) {
+        IJ.log("Skipping already processed: " + f.getName());
+        continue;
+    }
+
+    // Load image
+    ImagePlus imp = IJ.openImage(f.getAbsolutePath());
+    if (imp == null) continue;
+
+    imageCount++;
+
+    // Create overlay with clickable zones
+    Overlay overlay = new Overlay();
+    
+    // Zone 1: "Resegment please" (top-left, position 10, 20)
+    TextRoi text1 = new TextRoi(10, 20, "Resegment please", new Font("SansSerif", Font.BOLD, 16));
+    text1.setStrokeColor(Color.RED);
+    text1.setFillColor(new Color(255, 0, 0, 100));
+    overlay.add(text1);
+    
+    // Zone 2: "This is good" (top-left, below first, position 10, 60)
+    TextRoi text2 = new TextRoi(10, 60, "This is good", new Font("SansSerif", Font.BOLD, 16));
+    text2.setStrokeColor(Color.GREEN);
+    text2.setFillColor(new Color(0, 255, 0, 100));
+    overlay.add(text2);
+    
+    imp.setOverlay(overlay);
+    imp.show();
+    
+    IJ.log("\n=== Image " + imageCount + "/" + files.length + " ===");
+    IJ.log("File: " + f.getName());
+    IJ.log("Click on zone and press 'T' to add ROI");
+    
+    // Clear ROI Manager before waiting
+    rm.reset();
+    
+    // Wait for user to add ROI (press T)
+    IJ.setTool("point");
+    
+    while (rm.getCount() == 0) {
+        IJ.wait(100);
+        if (imp.getWindow() == null) {
+            // User closed the window
+            IJ.log("  -> Skipped (window closed)");
+            imp.close();
+            break;
+        }
+    }
+    
+    if (imp.getWindow() == null) continue;
+    
+    // Get the ROI that was added
+    if (rm.getCount() > 0) {
+        Roi roi = rm.getRoi(0);
+        
+        if (roi != null) {
+            // Get click coordinates
+            int x = (int)roi.getXBase();
+            int y = (int)roi.getYBase();
+            
+            IJ.log("  Click detected at: (" + x + ", " + y + ")");
+            
+            // Determine which zone was clicked
+            // Zone 1 "Resegment please": approximately x < 200, y < 50
+            // Zone 2 "This is good": approximately x < 200, 50 < y < 100
+            
+            String decision = "";
+            boolean needsResegmentation = false;
+            
+            if (x < 200 && y < 50) {
+                decision = "Resegment please";
+                needsResegmentation = true;
+                IJ.log("  -> Decision: RESEGMENT PLEASE");
+                resegmentCount++;
+            } else if (x < 200 && y >= 50 && y < 100) {
+                decision = "This is good";
+                IJ.log("  -> Decision: THIS IS GOOD");
+            } else {
+                decision = "Unknown zone";
+                IJ.log("  -> Decision: UNKNOWN ZONE (not counted)");
+            }
+            
+            // Store result
+            String[] result = new String[3];
+            result[0] = f.getName();
+            result[1] = decision;
+            result[2] = needsResegmentation ? "Yes" : "No";
+            results.add(result);
+            
+            // Write CSV immediately after each image
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter(csvPath));
+                writer.write("Image_Name,Decision,Needs_Resegmentation\n");
+                
+                for (int j = 0; j < results.size(); j++) {
+                    String[] r = (String[])results.get(j);
+                    writer.write(r[0] + "," + r[1] + "," + r[2] + "\n");
+                }
+                
+                writer.close();
+            } catch (Exception e) {
+                IJ.log("  -> ERROR writing CSV: " + e.toString());
+            }
+            
+            // If needs resegmentation, copy original image to Resegmentation folder
+            if (needsResegmentation) {
+                String originalName = f.getName();
+                File destFile = new File(resegFolder, originalName);
+                
+                try {
+                    // Copy file
+                    java.nio.file.Files.copy(f.toPath(), destFile.toPath(), 
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    IJ.log("  -> Copied to: " + destFile.getAbsolutePath());
+                } catch (Exception e) {
+                    IJ.log("  -> ERROR copying file: " + e.toString());
+                }
+            }
+        }
+    }
+    
+    // Clear ROI Manager
+    rm.reset();
+    
+    // Close image
+    imp.changes = false;
+    imp.close();
+}
+
+IJ.log("\n=== SUMMARY ===");
+IJ.log("Total images reviewed: " + imageCount);
+IJ.log("Images needing resegmentation: " + resegmentCount);
+IJ.log("Images marked as good: " + (results.size() - resegmentCount));
+IJ.log("\nResegmentation folder: " + resegFolder.getAbsolutePath());
+IJ.log("CSV file: " + csvPath);
+IJ.log("Done!");
